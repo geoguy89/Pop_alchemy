@@ -192,6 +192,10 @@ class GameViewModel(
     /** A short message for the player ("Request sent", errors). Cleared by [dismissNotice]. */
     var notice by mutableStateOf<String?>(null)
         private set
+    /** Set when the notice is about a new chat message: the toast then offers to open that chat. */
+    private var noticeChat: Pair<String, String>? = null
+    /** The friend whose new message the current notice is about, if it is one. */
+    val noticeChatFrom: String? get() = noticeChat?.takeIf { it.first == notice }?.second
 
     /** Hovered cell while a finger is on the board, or -1. */
     var hoverIndex by mutableIntStateOf(-1)
@@ -706,6 +710,12 @@ class GameViewModel(
 
     fun dismissNotice() { notice = null }
 
+    fun openNoticeChat() {
+        val friend = noticeChatFrom?.let { chatFriend(it) }
+        notice = null
+        if (friend != null) openChat(friend)
+    }
+
     // ---- Async challenges ---------------------------------------------------------------------------------------------
 
     /** Challenges waiting for our run. */
@@ -962,6 +972,12 @@ class GameViewModel(
         unread = counts
         store.saveUnread(counts)
         if (open == null) audio.play(Sfx.HINT, 0.6f)
+        val unseen = messages.map { it.from }.distinct().filter { it != open }
+            .mapNotNull { id -> online.friends.firstOrNull { it.playerId == id } }
+        if (unseen.isNotEmpty()) {
+            notice = if (unseen.size == 1) "New message from ${unseen[0].name}" else "New messages from ${unseen.joinToString { it.name }}"
+            noticeChat = unseen.singleOrNull()?.let { notice!! to it.playerId }
+        }
         if (!windowFocused) for (from in messages.map { it.from }.distinct()) {
             online.friends.firstOrNull { it.playerId == from }?.let { systemNotices.tryEmit("Refiner's Fire" to "New message from ${it.name}") }
         }

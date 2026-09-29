@@ -133,6 +133,24 @@ class GameEngineTest {
     }
 
     @Test
+    fun hintHoldsOneForgeLevelForTwoBoards() {
+        var e = engineWith(Piece.Cornerstone)
+        val board = e.state.board
+        e.useHint()
+        assertEquals(1, e.state.forge)
+        e.play(index(4, 4))
+        assertEquals("placing doesn't cool it below one", 1, e.state.forge)
+        e = GameEngine(e.state.copy(board = board + 1, forge = 2, current = Piece.Cornerstone))
+        e.play(e.validCells().first())
+        e = GameEngine(e.state.copy(current = Piece.Cornerstone))
+        e.play(e.validCells().first())
+        assertEquals("still held on the next board", 1, e.state.forge)
+        e = GameEngine(e.state.copy(board = board + 2, current = Piece.Cornerstone))
+        e.play(e.validCells().first())
+        assertEquals("released two boards later", 0, e.state.forge)
+    }
+
+    @Test
     fun streakMilestonesEveryTenAndHammerTrashKeepsStreak() {
         var e = engineWith(Piece.Cornerstone)
         e.play(index(4, 4))

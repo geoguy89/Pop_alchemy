@@ -29,6 +29,8 @@ data class GameState(
     val gold: List<Boolean>,
     val current: Piece,
     val forge: Int = 0,
+    /** After a hint the forge can't drop below one level until this board is reached (hint board + 2). */
+    val hintLockUntilBoard: Int = 0,
     val score: Long = 0,
     val streak: Int = 0,
     val bestStreak: Int = 0,
@@ -212,7 +214,8 @@ class GameEngine(state: GameState) {
             events += GameEvent.Placed(index, piece, pts, neighborCount)
             if (streak % STREAK_MILESTONE == 0) events += GameEvent.StreakMilestone(streak)
         }
-        var forge = (s.forge - 1).coerceAtLeast(0)
+        val forgeFloor = if (s.board < s.hintLockUntilBoard) 1 else 0
+        var forge = (s.forge - 1).coerceAtLeast(minOf(forgeFloor, s.forge))
 
         // Completed rows and columns.
         val fullRows = (0 until ROWS).filter { r -> (0 until COLS).all { c -> cells[index(r, c)] != null } }
@@ -236,8 +239,8 @@ class GameEngine(state: GameState) {
             events += GameEvent.LinesCleared(fullRows, fullCols, removed, newlyGold, pts, bonuses)
             // A cleared line empties the forge -- unless it finished the board, which only lowers it one level.
             if (!gold.all { it }) {
-                if (forge > 0) events += GameEvent.ForgeEmptied
-                forge = 0
+                if (forge > forgeFloor) events += GameEvent.ForgeEmptied
+                forge = minOf(forge, forgeFloor)
             }
         }
 
@@ -316,7 +319,13 @@ class GameEngine(state: GameState) {
     fun useHint(): List<Int> {
         val s = state
         if (s.gameOver) return emptyList()
-        state = s.copy(score = s.score - minOf(hintCost(), s.score), hintsUsed = s.hintsUsed + 1)
+        // A hint also stokes the forge one level (never past full), and it stays at least that full for two boards.
+        state = s.copy(
+            score = s.score - minOf(hintCost(), s.score),
+            hintsUsed = s.hintsUsed + 1,
+            forge = (s.forge + 1).coerceAtMost(FORGE_CAPACITY),
+            hintLockUntilBoard = s.board + 2,
+        )
         return validCells()
     }
 

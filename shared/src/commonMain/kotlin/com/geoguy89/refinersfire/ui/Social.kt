@@ -551,6 +551,10 @@ fun NoticeToast(vm: GameViewModel) {
         ) {
             Text(text, style = bodyStyle(14.sp, Palette.parchment), modifier = Modifier.weight(1f, fill = false))
             Spacer(Modifier.width(12.dp))
+            if (vm.noticeChatFrom != null) {
+                Text("Read", style = bodyStyle(14.sp, Palette.goldLight, bold = true), modifier = Modifier.clickable { vm.openNoticeChat() })
+                Spacer(Modifier.width(16.dp))
+            }
             Text("OK", style = bodyStyle(14.sp, Palette.goldLight, bold = true))
         }
     }

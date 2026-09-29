@@ -105,7 +105,8 @@ Turning or folding the phone never loses your place.
 * **Cornerstone**: matches anything, and anything can be placed beside it.
 * **Refiner's Hammer**: knocks out any stone you choose. Throwing it away costs no points and doesn't break your
   streak, though it still fills the forge.
-* **Hint**: lights up every square the current stone can go, for a few points.
+* **Hint**: lights up every square the current stone can go. It costs points and adds a level to the forge, and
+  the forge can't cool below one level until you've moved on two boards.
 * **Difficulty**: Easy starts on board 1, Average on board 6, Hard on board 11. **Strategic** has no clock; in
   **Time Trial** each stone must be placed before the hourglass runs out.
 
@@ -120,7 +121,7 @@ Turning or folding the phone never loses your place.
 | Cleared line where every stone is the same shape and colour | +1,000 |
 | Board completed | 500 |
 | Discard | −10 |
-| Hint | −25 |
+| Hint | −25, plus the forge penalty above |
 
 Everything, penalties included, is multiplied by the difficulty (Easy ×1, Average ×2, Hard ×4) and doubled again in
 Time Trial. The score never drops below zero. Every 10 stones placed without a discard is a streak.

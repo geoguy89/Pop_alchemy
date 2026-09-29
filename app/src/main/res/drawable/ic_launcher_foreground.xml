@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Refiner's Fire: a flame over a gold crucible, inside a gold ring. Same drawing as gfx/AppIcon.kt. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <!-- Outer ring -->
+    <path android:pathData="M54,24a30,30 0,1 1,0 60a30,30 0,1 1,0 -60z"
+        android:strokeWidth="2.6" android:strokeColor="#FFE8B64A" android:fillColor="#00000000" />
+    <!-- Flame -->
+    <path android:pathData="M54,30 C60,39 69,46 69,58 C69,67 62,73 54,73 C46,73 39,67 39,58 C39,51 44,47 46,40 C49,45 51,47 52,49 C54,43 55,37 54,30 Z">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="linear" android:startX="54" android:startY="30"
+                android:endX="54" android:endY="73">
+                <item android:offset="0" android:color="#FFE2361B" />
+                <item android:offset="0.55" android:color="#FFFF7A1A" />
+                <item android:offset="1" android:color="#FFFFD27A" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <path android:pathData="M54,52 C57,57 61,60 61,65 C61,69 58,72 54,72 C50,72 47,69 47,65 C47,61 51,58 54,52 Z"
+        android:fillColor="#FFFFF1B0" />
+    <!-- Crucible -->
+    <path android:pathData="M37,72 L71,72 L67,82 L41,82 Z" android:strokeWidth="1.2" android:strokeColor="#FF6E4E1C">
+        <aapt:attr name="android:fillColor">
+            <gradient android:type="linear" android:startX="54" android:startY="72"
+                android:endX="54" android:endY="82">
+                <item android:offset="0" android:color="#FFFFF3B0" />
+                <item android:offset="0.5" android:color="#FFF2C14E" />
+                <item android:offset="1" android:color="#FFB07A1C" />
+            </gradient>
+        </aapt:attr>
+    </path>
+</vector>

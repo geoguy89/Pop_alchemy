@@ -1,0 +1,178 @@
+# Refiner's Fire
+
+*"He will sit like a refiner of silver, burning away the dross. He will purify the Levites, refining them like gold
+and silver, so that they may once again offer acceptable sacrifices to the Lord."* (Malachi 3:3, NLT)
+
+A tile-matching puzzle for Android phones, foldables and Windows. Place stones on a board of lead; fill a row or
+column and it turns to gold. Refine the whole board to move on. Play alone, against friends in real time, or send
+them a challenge to answer when they can.
+
+| Title | Playing on a phone | 1v1 match |
+|---|---|---|
+| ![](docs/screenshots/title.png) | ![](docs/screenshots/phone_game.png) | ![](docs/screenshots/match.png) |
+
+**[Download the latest version](../../releases/latest)**: the Android APK, a Windows installer, or a portable
+Windows zip.
+
+---
+
+## Installing on Android (first time)
+
+Refiner's Fire isn't on the Google Play Store, so Android treats it as an app "from an unknown source". That only
+means it came from somewhere other than the Play Store; you give permission once and it installs like any other app.
+You need Android 8.0 or newer.
+
+1. **On your phone**, open the [latest release](../../releases/latest) page in Chrome (or your usual browser).
+2. Under **Assets**, tap **`RefinersFire-x.y.z-android.apk`**.
+   * If Chrome warns *"File might be harmful"*, tap **Download anyway**.
+3. When the download finishes, tap **Open** in the notification. You can also open the **Files** app → **Downloads**
+   and tap the APK.
+4. Android says *"For your security, your phone is not allowed to install unknown apps from this source."*
+   * Tap **Settings**, switch on **Allow from this source**, then tap **Back** (←).
+   * If you don't see that prompt, turn it on yourself:
+     * **Pixel and most phones**: Settings → Apps → Special app access → **Install unknown apps** → Chrome → **Allow from this source**.
+     * **Samsung**: Settings → Apps → ⋮ (top right) → Special access → **Install unknown apps** → Chrome → **Allow**.
+5. Tap **Install**.
+   * Google Play Protect may say the app is unfamiliar or ask you to scan it. Tap **More details** → **Install
+     anyway**, or **Scan app** and then install. It warns about any app that isn't from the Play Store.
+6. Tap **Open**, choose your player name, and play.
+
+When you're finished, you can switch *Allow from this source* back off for Chrome. Updates don't need it (see below).
+
+### Updating
+
+When a new version is out, the game offers it on the title screen: **Update Now**, **Later** or **Skip This
+Version**. You can also check any time in **Options → Check Now**.
+
+* **Update Now** downloads the update inside the game and opens Android's installer. Tap **Update**.
+* **The first time**, Android asks to let Refiner's Fire install apps. Tap **Settings**, switch on **Allow from this
+  source**, go back, and tap **Update**. After that it's one tap.
+* Updates install over the top: your scores, friends, achievements and saved games stay.
+
+### Troubleshooting
+
+* **"App not installed" or "conflicts with an existing package"**: if you tried an earlier test build of this game
+  under a different name, uninstall that first. It's a separate app.
+* **"There was a problem parsing the package"**: the download didn't finish. Delete the APK from Downloads and
+  download it again.
+* **Nothing happens when you tap the APK**: open it from the **Files** app → **Downloads** instead.
+
+## Installing on Windows
+
+* **Installer**: download `RefinersFire-x.y.z-windows-setup.msi` and run it. It adds Start-menu and desktop
+  shortcuts; later versions install over the top.
+* **Portable**: download `RefinersFire-x.y.z-windows-portable.zip`, unzip it anywhere, and run
+  `Refiners Fire\Refiners Fire.exe`.
+* Windows SmartScreen may warn about an unrecognised app: choose **More info → Run anyway**.
+* The first time you play with friends nearby, Windows may ask to let the game through the firewall. Allow it on
+  **Private** networks.
+
+Keys: click to place, right-click / Space / D to discard, H for a hint, Esc for the menu, F11 for full screen.
+
+---
+
+## How to play
+
+* Each turn you get a **stone** to place. It must sit next to at least one other stone (up, down, left or right; not
+  diagonally), and **every** stone it touches must share its colour or its shape. On an empty board it can go
+  anywhere.
+* Fill a whole row or column and its stones are cleared, turning those squares to **gold**. Turn every square to
+  gold to finish the board. The next board brings more shapes and colours.
+* **The forge**: if a stone has nowhere to go (or you'd rather not place it), discard it into the forge. The forge
+  holds three. Each discard raises it a level and each placement cools it one. Clearing a line empties it, and
+  finishing a board cools it one level. Discard with the forge full and the game is over.
+* **Cornerstone**: matches anything, and anything can be placed beside it.
+* **Refiner's Hammer**: knocks out any stone you choose. Throwing it away costs no points and doesn't break your
+  streak, though it still fills the forge.
+* **Hint**: lights up every square the current stone can go, for a few points.
+* **Difficulty**: Easy starts on board 1, Average on board 6, Hard on board 11. **Strategic** has no clock; in
+  **Time Trial** each stone must be placed before the hourglass runs out.
+
+### Scoring
+
+| | Points |
+|---|---|
+| Stone on a lead square touching 1 / 2 / 3 / 4 stones | 5 / 15 / 30 / 50 |
+| Stone on a gold square touching 1 / 2 / 3 / 4 stones | 1 / 2 / 3 / 4 |
+| Each row or column cleared | 50 |
+| Cleared line where every stone is the same shape | +250 |
+| Cleared line where every stone is the same shape and colour | +1,000 |
+| Board completed | 500 |
+| Discard | −10 |
+| Hint | −25 |
+
+Everything, penalties included, is multiplied by the difficulty (Easy ×1, Average ×2, Hard ×4) and doubled again in
+Time Trial. The score never drops below zero. Every 10 stones placed without a discard is a streak.
+
+Titles run from **Dross** (0) through Raw Ore, Apprentice Smith, Journeyman, Silversmith, Goldsmith, Refiner and
+Master Refiner, to **Refiner of Silver**, **Refiner of Gold** and **Pure Gold** (40,000+).
+
+## Friends and 1v1
+
+Open **Friends & 1v1** from the title screen.
+
+* **Friend code**: yours looks like `K7QM-3XPD-9HTW`. Tap **Copy Code** and send it to someone. When they enter it,
+  you're both asked to accept. You can also add people from the Global or Nearby Hall of Fame. Friends are marked
+  with a green check.
+* **Online status**: friends are listed online-first, with "Online now" or when they were last seen.
+* **Live 1v1**: challenge a friend who's online. You both play the same difficulty and get the same stones in the same
+  order; your rival's board is shown live beside yours, with a banner whenever they clear a board. The challenger
+  picks the match type:
+
+  | Match | How to win |
+  |---|---|
+  | **Timed** | Highest score after 5, 8 or 12 minutes |
+  | **Race** | First to reach Board N |
+  | **Score Rush** | First to the target score |
+  | **Survival** | No clock: the first forge to overflow loses |
+  | **Stoke Duel** | Timed, and every line you clear stokes your rival's forge up a level (a shape or perfect line stokes it twice) |
+
+  If you lose connection, the game reconnects on its own; leave for too long and the match is forfeited.
+* **Challenges** (no need to be online together): pick a friend, a difficulty and 1, 3 or 5 boards, and play your
+  run. They're told "beat 4,250" next time they open the game, and play the exact same run whenever they like within
+  a week. The higher score wins.
+* **Chat** with any friend, in or out of a match. Only the two of you can read it.
+* Requests, challenges and messages show up while the game is open (there are no push notifications yet).
+
+## Sharing and privacy
+
+**Options → Share Scores**:
+
+* **Off**: your scores stay on your device (friends you add still see them).
+* **Local**: swap high scores with anyone playing on the same Wi-Fi.
+* **Global**: you're on the ranked **Global leaderboard**. Other Global players can add you or challenge you, and you
+  them, without being friends first. Chat stays friends-only.
+
+**Options → Hide my activity**: the game stops recording when you play. Friends see "Activity hidden" and you
+never show as online.
+
+To make friends and matches work, the game keeps your player name, friend code, high scores, friends and match
+results online. Your scores appear on the Global board only if you choose Global.
+
+## Themes, pieces and achievements
+
+* **Modern**: brass and velvet, with the twelve stones of the high priest's breastplate (Exodus 28): carnelian,
+  peridot, emerald, turquoise, lapis lazuli, moonstone, jacinth, agate, amethyst, beryl, onyx and jasper, each a
+  different cut.
+* **Temple**: lamplit stone, with fish, crown, anchor, tablets, key, lamp, wheat, olive branch, harp, scroll, shofar
+  and star.
+* **Future**: neon and glass, with clean geometric shapes.
+* **Options → Pieces** uses any theme's pieces with any other theme.
+* Each board has its own engraving: the seal, the breastplate, day and night, the vine, the lampstand, the refiner's
+  furnace, the anchor, the tablets and the rose of Sharon.
+* **160 achievements** to earn. They're never announced mid-game.
+
+| Temple | Future | Achievements |
+|---|---|---|
+| ![](docs/screenshots/temple.png) | ![](docs/screenshots/future.png) | ![](docs/screenshots/achievements.png) |
+
+---
+
+## Credits
+
+Fonts, all under the SIL Open Font License (see `licenses/`): Cinzel and Cinzel Decorative by Natanael Gama; Pirata One
+by Rodrigo Fuenzalida and Nicolas Massi; IM Fell English by Igino Marini; Audiowide by Astigmatic; Rajdhani by Indian
+Type Foundry.
+
+Scripture quotations are taken from the Holy Bible, New Living Translation, copyright © 1996, 2004, 2015 by Tyndale
+House Foundation. Used by permission of Tyndale House Publishers, Carol Stream, Illinois 60188. All rights reserved.

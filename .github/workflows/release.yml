@@ -51,9 +51,7 @@ jobs:
           name: android
           path: RefinersFire-*-android.apk
 
-  windows:
-    name: Windows installer & portable
-    runs-on: windows-latest
+    windows:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -61,6 +59,9 @@ jobs:
           distribution: temurin
           java-version: 17
       - uses: gradle/actions/setup-gradle@v4
+      - name: Make gradlew executable
+        shell: bash
+        run: chmod +x ./gradlew
       - name: Build MSI and app image
         shell: bash
         env:

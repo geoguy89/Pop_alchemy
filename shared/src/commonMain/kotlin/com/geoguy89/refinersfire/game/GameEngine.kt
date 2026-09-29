@@ -29,8 +29,8 @@ data class GameState(
     val gold: List<Boolean>,
     val current: Piece,
     val forge: Int = 0,
-    /** After a hint the forge can't drop below one level until this board is reached (hint board + 2). */
-    val hintLockUntilBoard: Int = 0,
+    /** Hints used on the current board: while any are, the forge can't cool below one level. */
+    val hintsThisBoard: Int = 0,
     val score: Long = 0,
     val streak: Int = 0,
     val bestStreak: Int = 0,
@@ -214,7 +214,7 @@ class GameEngine(state: GameState) {
             events += GameEvent.Placed(index, piece, pts, neighborCount)
             if (streak % STREAK_MILESTONE == 0) events += GameEvent.StreakMilestone(streak)
         }
-        val forgeFloor = if (s.board < s.hintLockUntilBoard) 1 else 0
+        val forgeFloor = if (s.hintsThisBoard > 0) 1 else 0
         var forge = (s.forge - 1).coerceAtLeast(minOf(forgeFloor, s.forge))
 
         // Completed rows and columns.
@@ -261,6 +261,7 @@ class GameEngine(state: GameState) {
             events += GameEvent.BoardCleared(s.board, pts, completed)
             next = completed.copy(
                 board = s.board + 1,
+                hintsThisBoard = 0,
                 cells = List(ROWS * COLS) { null },
                 gold = List(ROWS * COLS) { false },
             )
@@ -319,12 +320,13 @@ class GameEngine(state: GameState) {
     fun useHint(): List<Int> {
         val s = state
         if (s.gameOver) return emptyList()
-        // A hint also stokes the forge one level (never past full), and it stays at least that full for two boards.
+        // A hint also stokes the forge: one level for the first on a board, two for the second, and so on (never past
+        // full). Until the board is cleared the forge can't cool below one level.
         state = s.copy(
             score = s.score - minOf(hintCost(), s.score),
             hintsUsed = s.hintsUsed + 1,
-            forge = (s.forge + 1).coerceAtMost(FORGE_CAPACITY),
-            hintLockUntilBoard = s.board + 2,
+            forge = (s.forge + s.hintsThisBoard + 1).coerceAtMost(FORGE_CAPACITY),
+            hintsThisBoard = s.hintsThisBoard + 1,
         )
         return validCells()
     }

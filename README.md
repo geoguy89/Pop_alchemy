@@ -105,8 +105,9 @@ Turning or folding the phone never loses your place.
 * **Cornerstone**: matches anything, and anything can be placed beside it.
 * **Refiner's Hammer**: knocks out any stone you choose. Throwing it away costs no points and doesn't break your
   streak, though it still fills the forge.
-* **Hint**: lights up every square the current stone can go. It costs points and adds a level to the forge, and
-  the forge can't cool below one level until you've moved on two boards.
+* **Hint**: lights up every square the current stone can go. It costs points and stokes the forge: one level for
+  the first hint on a board, two for the second, and so on. Until you clear that board, the forge can't cool below
+  one level.
 * **Difficulty**: Easy starts on board 1, Average on board 6, Hard on board 11. **Strategic** has no clock; in
   **Time Trial** each stone must be placed before the hourglass runs out.
 

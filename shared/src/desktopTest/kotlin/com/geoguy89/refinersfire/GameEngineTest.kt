@@ -133,21 +133,21 @@ class GameEngineTest {
     }
 
     @Test
-    fun hintHoldsOneForgeLevelForTwoBoards() {
+    fun hintsStokeTheForgeUntilTheBoardIsCleared() {
         var e = engineWith(Piece.Cornerstone)
-        val board = e.state.board
         e.useHint()
-        assertEquals(1, e.state.forge)
+        assertEquals("first hint on a board: one level", 1, e.state.forge)
         e.play(index(4, 4))
         assertEquals("placing doesn't cool it below one", 1, e.state.forge)
-        e = GameEngine(e.state.copy(board = board + 1, forge = 2, current = Piece.Cornerstone))
-        e.play(e.validCells().first())
         e = GameEngine(e.state.copy(current = Piece.Cornerstone))
+        e.useHint()
+        assertEquals("second hint: two more", 3, e.state.forge)
+        e = GameEngine(e.state.copy(forge = 1, current = Piece.Cornerstone))
         e.play(e.validCells().first())
-        assertEquals("still held on the next board", 1, e.state.forge)
-        e = GameEngine(e.state.copy(board = board + 2, current = Piece.Cornerstone))
+        assertEquals("still held until the board is cleared", 1, e.state.forge)
+        e = GameEngine(e.state.copy(hintsThisBoard = 0, current = Piece.Cornerstone))
         e.play(e.validCells().first())
-        assertEquals("released two boards later", 0, e.state.forge)
+        assertEquals("released on a new board", 0, e.state.forge)
     }
 
     @Test

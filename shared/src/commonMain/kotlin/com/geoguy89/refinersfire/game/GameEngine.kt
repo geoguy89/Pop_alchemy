@@ -106,7 +106,7 @@ class GameEngine(state: GameState) {
         const val PERFECT_LINE_BONUS = 1000L
         const val BOARD_POINTS = 500L
         const val DISCARD_PENALTY = 10L
-        const val HINT_PENALTY = 25L
+        const val MAX_HINTS_PER_BOARD = 2
 
         fun newGame(difficulty: Difficulty, mode: GameMode, seed: Long = kotlin.random.Random.nextLong()): GameEngine {
             val board = difficulty.startBoard
@@ -314,16 +314,13 @@ class GameEngine(state: GameState) {
         return next - s.forge
     }
 
-    fun hintCost(): Long = HINT_PENALTY * state.multiplier
-
-    /** Reveal the legal squares for the current piece, at a cost. Returns the squares (possibly none). */
+    /** Reveal the legal squares for the current piece. Returns the squares (possibly none). */
     fun useHint(): List<Int> {
         val s = state
-        if (s.gameOver) return emptyList()
-        // A hint also stokes the forge: one level for the first on a board, two for the second, and so on (never past
-        // full). Until the board is cleared the forge can't cool below one level.
+        if (s.gameOver || s.hintsThisBoard >= MAX_HINTS_PER_BOARD) return emptyList()
+        // A hint stokes the forge: one level for the first on a board, two for the second (never past full). No
+        // more than two per board. Until the board is cleared the forge can't cool below one level.
         state = s.copy(
-            score = s.score - minOf(hintCost(), s.score),
             hintsUsed = s.hintsUsed + 1,
             forge = (s.forge + s.hintsThisBoard + 1).coerceAtMost(FORGE_CAPACITY),
             hintsThisBoard = s.hintsThisBoard + 1,

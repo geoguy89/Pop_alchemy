@@ -378,14 +378,12 @@ class GameViewModel(
 
     /** The hint is useless on an empty board (every square is legal) and is charged once per piece. */
     val hintAvailable: Boolean
-        get() = boardInteractive && !hintShown && state?.boardEmpty == false
-
-    val hintCost: Long get() = engine?.hintCost() ?: 0L
+        get() = boardInteractive && !hintShown && state?.boardEmpty == false &&
+            (state?.hintsThisBoard ?: 0) < GameEngine.MAX_HINTS_PER_BOARD
 
     fun useHint() {
         val e = engine ?: return
         if (!hintAvailable) return
-        val cost = minOf(e.hintCost(), e.state.score)
         val cells = e.useHint()
         bump { it.copy(hintsUsed = it.hintsUsed + 1) }
         hintShown = true
@@ -394,7 +392,7 @@ class GameViewModel(
         audio.play(Sfx.HINT)
         _haptics.tryEmit(Haptic.TICK)
         val msg = if (cells.isEmpty()) "No home for this stone" else "Hint"
-        fx.banner(if (cost > 0) "$msg  -$cost" else msg, if (cells.isEmpty()) Palette.ember else Palette.hint, height = 0.42f, y = ROWS - 0.8f)
+        fx.banner(msg, if (cells.isEmpty()) Palette.ember else Palette.hint, height = 0.42f, y = ROWS - 0.8f)
         state = e.state
         persist()
     }

@@ -58,8 +58,7 @@ private fun discardPulse(vm: GameViewModel): Float = if (vm.noMoves) 0.5f + 0.5f
 /** Paid hint: shows the legal squares for the current stone, once per stone. */
 @Composable
 private fun HintButton(vm: GameViewModel, modifier: Modifier) {
-    val cost = vm.hintCost
-    SmallBrass(if (cost > 0) "Hint -$cost" else "Hint", vm::useHint, modifier, enabled = vm.hintAvailable)
+    SmallBrass("Hint", vm::useHint, modifier, enabled = vm.hintAvailable)
 }
 
 @Composable

@@ -535,7 +535,7 @@ private val helpPages = listOf(
     ) { d, t -> d.strip(listOf(redLapis, redLapis, redLapis, redLapis, redLapis), List(5) { false }, t) },
     HelpPage(
         "Hints & Penalties",
-        "Stuck? The Hint button lights up every square the stone can go, at a price. Melting a stone in the forge also costs points. Every 10 stones placed without a discard is a streak; throwing away the Hammer doesn't break it and costs no points. Rise from Dross to Pure Gold!",
+        "Stuck? The Hint button lights up every square the stone can go, but stokes the forge: one level for the first hint on a board, two for the second, and it can't cool below one until that board is cleared. Two hints per board at most. Melting a stone in the forge costs points. Every 10 stones placed without a discard is a streak; throwing away the Hammer doesn't break it and costs no points. Rise from Dross to Pure Gold!",
     ) { d, t -> d.strip(listOf(redLapis, null, greenLapis, null), List(4) { false }, t, mapOf(1 to true, 3 to true)) },
 )
 

@@ -128,7 +128,7 @@ class GameEngineTest {
         val cells = e.useHint()
         assertEquals(e.validCells(), cells)
         assertEquals(4, cells.size)
-        assertEquals(100 - GameEngine.HINT_PENALTY, e.state.score)
+        assertEquals("hints cost no points", 100L, e.state.score)
         assertEquals(1, e.state.hintsUsed)
     }
 
@@ -142,6 +142,7 @@ class GameEngineTest {
         e = GameEngine(e.state.copy(current = Piece.Cornerstone))
         e.useHint()
         assertEquals("second hint: two more", 3, e.state.forge)
+        assertTrue("no third hint on a board", e.useHint().isEmpty() && e.state.hintsThisBoard == 2)
         e = GameEngine(e.state.copy(forge = 1, current = Piece.Cornerstone))
         e.play(e.validCells().first())
         assertEquals("still held until the board is cleared", 1, e.state.forge)

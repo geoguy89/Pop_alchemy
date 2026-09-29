@@ -24,7 +24,7 @@ android {
     }
 
     // One permanent key, so each release installs over the last. CI supplies it from repository secrets;
-    // without them (local builds) the release falls back to the debug key.
+    // without them (local builds) the release falls fallbacks to the debug key.
     val keystore = System.getenv("REFINERS_KEYSTORE_FILE")?.let(::file)?.takeIf { it.exists() }
     signingConfigs {
         if (keystore != null) {
@@ -83,6 +83,7 @@ dependencies {
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.material3:material3")
     implementation("androidx.activity:activity-compose:1.10.1")
+    implementation("androidx.fragment:fragment-ktx:1.8.6")
     implementation("androidx.core:core-ktx:1.16.0")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.9.0")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.9.0")

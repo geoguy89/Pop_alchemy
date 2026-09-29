@@ -14,6 +14,7 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Tray
 import androidx.compose.ui.window.Window
 import androidx.compose.ui.window.WindowPosition
 import androidx.compose.ui.window.application
@@ -49,6 +50,12 @@ fun main() = application {
     } }
     val state = rememberWindowState(size = DpSize(1280.dp, 860.dp), position = WindowPosition.Aligned(androidx.compose.ui.Alignment.Center))
     remember { vm.onAppForeground() }
+    // Chats, challenges and friend requests while the window is in the background show as system notifications.
+    val tray = androidx.compose.ui.window.rememberTrayState()
+    Tray(icon = AppWindowIcon, state = tray, tooltip = "Refiner's Fire")
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        vm.systemNotices.collect { (title, text) -> tray.sendNotification(androidx.compose.ui.window.Notification(title, text)) }
+    }
     Window(
         onCloseRequest = {
             vm.onAppBackground()
@@ -78,6 +85,14 @@ fun main() = application {
         },
     ) {
         window.minimumSize = java.awt.Dimension(720, 560)
+        androidx.compose.runtime.DisposableEffect(window) {
+            val focus = object : java.awt.event.WindowFocusListener {
+                override fun windowGainedFocus(e: java.awt.event.WindowEvent?) { vm.windowFocused = true }
+                override fun windowLostFocus(e: java.awt.event.WindowEvent?) { vm.windowFocused = false }
+            }
+            window.addWindowFocusListener(focus)
+            onDispose { window.removeWindowFocusListener(focus) }
+        }
         RefinersFireApp(vm)
     }
 }

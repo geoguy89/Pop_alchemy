@@ -54,6 +54,7 @@ class GameHolder(app: Application) : AndroidViewModel(app) {
         OkHttpTransport(),
         JvmChatCrypto,
         AndroidUpdater(app),
+        AndroidPush.registrar(app),
     )
     override fun onCleared() = game.dispose()
 }
@@ -69,10 +70,14 @@ class MainActivity : ComponentActivity() {
             hide(WindowInsetsCompat.Type.systemBars())
             systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         }
+        val notificationPermission = registerForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) {}
+        AndroidPush.askPermission = {
+            if (Build.VERSION.SDK_INT >= 33) runOnUiThread { notificationPermission.launch(android.Manifest.permission.POST_NOTIFICATIONS) }
+        }
         lifecycle.addObserver(LifecycleEventObserver { _, event ->
             when (event) {
-                Lifecycle.Event.ON_START -> vm.onAppForeground()
-                Lifecycle.Event.ON_STOP -> vm.onAppBackground()
+                Lifecycle.Event.ON_START -> { AndroidPush.visible = true; vm.onAppForeground() }
+                Lifecycle.Event.ON_STOP -> { AndroidPush.visible = false; vm.onAppBackground() }
                 else -> Unit
             }
         })

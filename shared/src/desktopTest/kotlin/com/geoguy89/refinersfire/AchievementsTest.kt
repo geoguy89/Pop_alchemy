@@ -80,6 +80,21 @@ class AchievementsTest {
         assertEquals("Travis the Great", vm.highScores.single().name)
     }
 
+    @Test
+    fun leavingTheAppSavesAndReturnsToTheTitle() {
+        val kv = MemoryKeyValueStore()
+        val vm = GameViewModel(Store(kv).also { it.saveSettings(com.geoguy89.refinersfire.data.Settings(playerName = "Alex", nameChosen = true)) }, SilentAudio)
+        vm.startNewGame(Difficulty.EASY, GameMode.TIME_TRIAL)
+        vm.tapCell(com.geoguy89.refinersfire.game.GameEngine.index(3, 3))
+        val placed = vm.state!!.cells
+        vm.onAppBackground()
+        assertEquals(Screen.TITLE, vm.screen)
+        assertEquals("saved for Continue", placed, vm.savedGame?.cells)
+        vm.onAppForeground()
+        vm.resumeSavedGame()
+        assertEquals(placed, vm.state!!.cells)
+    }
+
     private fun tryTap(vm: GameViewModel, i: Int): Boolean {
         val before = vm.state?.stonesPlaced ?: 0
         vm.tapCell(i)

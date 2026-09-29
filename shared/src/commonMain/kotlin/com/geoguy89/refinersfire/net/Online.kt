@@ -208,7 +208,7 @@ data class SyncResponse(
 )
 
 @Serializable private data class RegisterBody(val name: String)
-@Serializable private data class ProfileBody(val name: String? = null, val publicKey: String? = null, val hideActivity: Boolean? = null)
+@Serializable private data class ProfileBody(val name: String? = null, val publicKey: String? = null, val hideActivity: Boolean? = null, val pushToken: String? = null)
 @Serializable private data class LeaderboardResponse(val players: List<LeaderboardEntry>)
 @Serializable private data class ChatBody(val to: String, val nonce: String, val ct: String)
 @Serializable private data class AsyncCreateBody(val playerId: String, val difficulty: Difficulty, val boards: Int)
@@ -348,6 +348,12 @@ class OnlineService(
 
     fun setHideActivity(hide: Boolean) {
         send<Unit>("POST", "/v1/profile", encode(ProfileBody.serializer(), ProfileBody(hideActivity = hide)), null)
+    }
+
+    /** The device token for notifications, or "" to stop them. */
+    fun setPushToken(token: String) {
+        if (account == null) return
+        send<Unit>("POST", "/v1/profile", encode(ProfileBody.serializer(), ProfileBody(pushToken = token)), null)
     }
 
     fun fetchLeaderboard() {

@@ -1,11 +1,14 @@
 # Refiner's Fire
 
-*"He will sit like a refiner of silver, burning away the dross. He will purify the Levites, refining them like gold
-and silver, so that they may once again offer acceptable sacrifices to the Lord."* (Malachi 3:3, NLT)
+*"Faith is the confidence that what we hope for will actually happen; it gives us assurance about things we cannot
+see."* (Hebrews 11:1, NLT)
 
-A tile-matching puzzle for Android phones, foldables and Windows. Place stones on a board of lead; fill a row or
-column and it turns to gold. Refine the whole board to move on. Play alone, against friends in real time, or send
-them a challenge to answer when they can.
+A tile-matching puzzle for Android phones and Windows, **optimized for foldable phones**. Place stones on a board of
+lead; fill a row or column and it turns to gold. Refine the whole board to move on. Play alone, against friends in
+real time, or send them a challenge to answer when they can.
+
+> **Want to play with more people?** New players start with scores shared only on their own Wi-Fi. To appear on the
+> Global leaderboard and find players anywhere, go to **Options → Share Scores → Global**.
 
 | Title | Playing on a phone | 1v1 match |
 |---|---|---|
@@ -36,6 +39,9 @@ You need Android 8.0 or newer.
    * Google Play Protect may say the app is unfamiliar or ask you to scan it. Tap **More details** → **Install
      anyway**, or **Scan app** and then install. It warns about any app that isn't from the Play Store.
 6. Tap **Open**, choose your player name, and play.
+7. On Android 13 and newer the game asks to send notifications. Tap **Allow** if you'd like to hear about messages,
+   challenges and friend requests while the game is closed. You can change this any time in **Options →
+   Notifications**.
 
 When you're finished, you can switch *Allow from this source* back off for Chrome. Updates don't need it (see below).
 
@@ -68,6 +74,21 @@ Version**. You can also check any time in **Options → Check Now**.
   **Private** networks.
 
 Keys: click to place, right-click / Space / D to discard, H for a hint, Esc for the menu, F11 for full screen.
+
+While the game window is in the background, new messages, challenges and friend requests pop up as Windows
+notifications.
+
+## Foldable phones
+
+The layout follows your phone as you fold it:
+
+* **Folded**: the familiar phone layout, with the board on top and the controls below.
+* **Open flat**: the board and the panel sit side by side, using the whole inner screen.
+* **Half-folded like a laptop (tabletop)**: the board sits on the top half and the controls on the bottom half, so
+  you can prop the phone up and play hands-free.
+* **Half-folded like a book**: the panel sits on one side of the fold and the board on the other.
+
+Turning or folding the phone never loses your place.
 
 ---
 
@@ -116,8 +137,9 @@ Open **Friends & 1v1** from the title screen.
   with a green check.
 * **Online status**: friends are listed online-first, with "Online now" or when they were last seen.
 * **Live 1v1**: challenge a friend who's online. You both play the same difficulty and get the same stones in the same
-  order; your rival's board is shown live beside yours, with a banner whenever they clear a board. The challenger
-  picks the match type:
+  order. A bar above your board shows your rival's score and progress, with a banner whenever they clear a board.
+  Tap **Peek** to see their board, then **Back to My Board**. Tap **Chat** at the bottom of the screen to talk
+  without leaving the match. The challenger picks the match type:
 
   | Match | How to win |
   |---|---|
@@ -127,12 +149,15 @@ Open **Friends & 1v1** from the title screen.
   | **Survival** | No clock: the first forge to overflow loses |
   | **Stoke Duel** | Timed, and every line you clear stokes your rival's forge up a level (a shape or perfect line stokes it twice) |
 
-  If you lose connection, the game reconnects on its own; leave for too long and the match is forfeited.
+  If you lose connection, the game reconnects on its own; leave for too long and the match is forfeited. (Switching
+  away during a live match doesn't send you to the title screen; come straight back to keep playing.)
 * **Challenges** (no need to be online together): pick a friend, a difficulty and 1, 3 or 5 boards, and play your
   run. They're told "beat 4,250" next time they open the game, and play the exact same run whenever they like within
   a week. The higher score wins.
 * **Chat** with any friend, in or out of a match. Only the two of you can read it.
-* Requests, challenges and messages show up while the game is open (there are no push notifications yet).
+* **Notifications**: when the game isn't open, your phone tells you about new messages ("New message from Sam"),
+  challenges and friend requests. The notification never includes what the message says. Turn them off in
+  **Options → Notifications**.
 
 ## Sharing and privacy
 
@@ -141,7 +166,8 @@ Open **Friends & 1v1** from the title screen.
 * **Off**: your scores stay on your device (friends you add still see them).
 * **Local**: swap high scores with anyone playing on the same Wi-Fi.
 * **Global**: you're on the ranked **Global leaderboard**. Other Global players can add you or challenge you, and you
-  them, without being friends first. Chat stays friends-only.
+  them, without being friends first. Chat stays friends-only. **Choose this if you want to play with a wider
+  audience.**
 
 **Options → Hide my activity**: the game stops recording when you play. Friends see "Activity hidden" and you
 never show as online.

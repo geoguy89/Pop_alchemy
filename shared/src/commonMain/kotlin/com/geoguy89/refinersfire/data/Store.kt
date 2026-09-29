@@ -27,6 +27,8 @@ data class Settings(
     val sharePlus: Boolean = false,
     /** Hide activity: the server keeps no record of when you play; friends see "Activity hidden". */
     val hideActivity: Boolean = false,
+    /** Notifications for chats, challenges and friend requests when the game isn't on screen. */
+    val notifications: Boolean = true,
     /** Piece shapes from another theme; null matches the theme. */
     val pieceSet: ThemeId? = null,
     val playerName: String = "Refiner",

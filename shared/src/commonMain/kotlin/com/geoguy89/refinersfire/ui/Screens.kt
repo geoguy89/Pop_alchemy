@@ -113,18 +113,18 @@ fun TitleScreen(vm: GameViewModel) {
             BrassButton(if (fresh > 0) "Achievements ($fresh new)" else "Achievements", vm::openAchievements, buttons, dark = true)
             BrassButton("Options", { vm.push(Overlay.Options) }, buttons, dark = true)
         }
-        // Malachi 3:3, New Living Translation.
+        // Hebrews 11:1, New Living Translation.
         Column(
             Modifier.align(Alignment.BottomCenter).safeDrawingPadding().padding(start = 24.dp, end = 24.dp, bottom = 12.dp).widthIn(max = 620.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
-                "\u201CHe will sit like a refiner of silver, burning away the dross. He will purify the Levites, refining them like " +
-                    "gold and silver, so that they may once again offer acceptable sacrifices to the Lord.\u201D",
+                "\u201CFaith is the confidence that what we hope for will actually happen; it gives us assurance about things we " +
+                    "cannot see.\u201D",
                 style = bodyStyle(12.sp, Palette.parchment.copy(alpha = 0.8f)).copy(fontStyle = androidx.compose.ui.text.font.FontStyle.Italic),
                 textAlign = TextAlign.Center,
             )
-            Text("Malachi 3:3 (NLT)", style = bodyStyle(11.sp, Palette.goldLight.copy(alpha = 0.85f), bold = true), modifier = Modifier.padding(top = 4.dp))
+            Text("Hebrews 11:1 (NLT)", style = bodyStyle(11.sp, Palette.goldLight.copy(alpha = 0.85f), bold = true), modifier = Modifier.padding(top = 4.dp))
         }
     }
 }
@@ -158,6 +158,7 @@ fun OverlayHost(vm: GameViewModel) {
         is Overlay.Chat -> ChatPanel(vm, o.friendId)
         Overlay.ChangeName -> NamePanel(vm, firstTime = false)
         Overlay.Update -> UpdatePanel(vm)
+        Overlay.Peek -> PeekPanel(vm)
         is Overlay.AsyncSetup -> AsyncSetupPanel(vm, o.rival)
         is Overlay.AsyncDone -> AsyncDonePanel(vm, o)
         Overlay.Achievements -> AchievementsPanel(vm)
@@ -216,6 +217,13 @@ private fun OptionsPanel(vm: GameViewModel) {
             BrassButton("Change", { vm.push(Overlay.ChangeName) }, Modifier.width(110.dp), dark = true, fontSize = 14.sp, minHeight = 38.dp)
         }
         OptionSwitch("Vibration", s.haptics, switchColors) { vm.click(); vm.updateSettings(s.copy(haptics = it)) }
+        if (vm.push.supported) {
+            OptionSwitch("Notifications", s.notifications, switchColors) { vm.setNotifications(it) }
+            Text(
+                "Chats, challenges and friend requests when the game isn't open on screen.",
+                style = bodyStyle(12.sp, Palette.parchment.copy(alpha = 0.7f)), textAlign = TextAlign.Center,
+            )
+        }
         OptionSwitch("Hide my activity", s.hideActivity, switchColors) { vm.setHideActivity(it) }
         Text(
             if (s.hideActivity) "The server keeps no record of when you play. Friends see \"Activity hidden\" and you never show as online."

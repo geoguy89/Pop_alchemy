@@ -76,7 +76,7 @@ private fun WideLayout(vm: GameViewModel, state: GameState, panelWidth: Dp, gap:
             ) {
                 val m = vm.match
                 if (m != null) {
-                    OpponentCard(vm, m, Modifier.fillMaxWidth(), boardWidth = if (short) 110.dp else 170.dp)
+                    OpponentCard(vm, m, Modifier.fillMaxWidth())
                     ScorePlaque(state, Modifier.fillMaxWidth(), digitsSize = 22.sp, showRank = false)
                 } else {
                     if (!short) Logo(vm, 34.sp)
@@ -98,6 +98,7 @@ private fun WideLayout(vm: GameViewModel, state: GameState, panelWidth: Dp, gap:
                     SmallBrass("Menu", { vm.push(Overlay.Pause) }, Modifier.weight(1f))
                     SmallBrass("Options", { vm.push(Overlay.Options) }, Modifier.weight(1f))
                 }
+                MatchChatButton(vm, Modifier.fillMaxWidth())
             }
         }
         if (gap > 0.dp) Spacer(Modifier.width(gap))
@@ -118,7 +119,7 @@ private fun TallLayout(vm: GameViewModel, state: GameState) {
         ) {
             val m = vm.match
             if (m != null) {
-                OpponentCard(vm, m, Modifier.weight(1f), boardWidth = 150.dp)
+                OpponentCard(vm, m, Modifier.weight(1f))
                 Spacer(Modifier.width(8.dp))
                 ScorePlaque(state, Modifier.widthIn(min = 130.dp), digitsSize = 22.sp, showRank = false)
             } else {
@@ -151,6 +152,7 @@ private fun TallLayout(vm: GameViewModel, state: GameState) {
             }
         }
         Spacer(Modifier.weight(1f))
+        MatchChatButton(vm, Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp))
     }
 }
 
@@ -168,7 +170,7 @@ private fun TabletopLayout(vm: GameViewModel, state: GameState, hingeY: Dp, hing
             horizontalArrangement = Arrangement.SpaceEvenly,
         ) {
             val m = vm.match
-            if (m != null) OpponentCard(vm, m, Modifier.width(170.dp))
+            if (m != null) OpponentCard(vm, m, Modifier.width(190.dp))
             ScorePlaque(state, Modifier.widthIn(min = 150.dp), digitsSize = 24.sp, showRank = m == null)
             HandSlot(vm, state, Modifier.heightIn(max = 230.dp).fillMaxHeight().aspectRatio(0.8f))
             Forge(vm, state, Modifier.heightIn(max = 230.dp).fillMaxHeight().aspectRatio(0.65f))
@@ -177,6 +179,7 @@ private fun TabletopLayout(vm: GameViewModel, state: GameState, hingeY: Dp, hing
                 HintButton(vm, Modifier.fillMaxWidth())
                 SmallBrass("Menu", { vm.push(Overlay.Pause) }, Modifier.fillMaxWidth())
                 SmallBrass("Options", { vm.push(Overlay.Options) }, Modifier.fillMaxWidth())
+                MatchChatButton(vm, Modifier.fillMaxWidth())
             }
         }
     }

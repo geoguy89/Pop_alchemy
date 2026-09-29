@@ -48,6 +48,8 @@ import com.geoguy89.refinersfire.net.MatchSession
 import com.geoguy89.refinersfire.net.NoHttp
 import com.geoguy89.refinersfire.net.NoLanTransport
 import com.geoguy89.refinersfire.net.OnlineService
+import com.geoguy89.refinersfire.net.NoPush
+import com.geoguy89.refinersfire.net.PushRegistrar
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -76,6 +78,7 @@ sealed interface Overlay {
     data object Achievements : Overlay
     data object ChangeName : Overlay
     data object Update : Overlay
+    data object Peek : Overlay
     data class AsyncSetup(val rival: Rival) : Overlay
     /** A challenge run just ended: [sent] for the challenger, otherwise the outcome for the friend. */
     data class AsyncDone(val rival: String, val rivalId: String?, val score: Long, val theirScore: Long?, val sent: Boolean, val won: Boolean?) : Overlay
@@ -97,6 +100,7 @@ class GameViewModel(
     http: HttpTransport = NoHttp,
     private val crypto: ChatCrypto = NoChatCrypto,
     val updater: AppUpdater = NoUpdater,
+    val push: PushRegistrar = NoPush,
 ) {
     val fx = BoardFx()
 
@@ -151,6 +155,13 @@ class GameViewModel(
     var unread by mutableStateOf(store.loadUnread())
         private set
     private var keyPublished = false
+    private var pushRegistered = false
+    private var trayAnnounced = setOf<String>()
+
+    /** False while the desktop window is in the background; notices then go to the system tray. */
+    var windowFocused = true
+    /** Notices for the desktop tray (title, text) when the window isn't focused. */
+    val systemNotices = MutableSharedFlow<Pair<String, String>>(extraBufferCapacity = 8, onBufferOverflow = BufferOverflow.DROP_OLDEST)
 
     // Achievements: counters, what's unlocked, and a queue of unlocks waiting for a quiet moment to be mentioned.
     var stats by mutableStateOf(store.loadStats())
@@ -228,6 +239,15 @@ class GameViewModel(
             if (r.me.hideActivity != settings.hideActivity) online.setHideActivity(settings.hideActivity)
             if (r.friends.size > stats.friends) bump { it.copy(friends = r.friends.size) }
             publishChatKey(r.me.publicKey)
+            registerPush()
+            // Desktop: new challenges and friend requests while the window is in the background.
+            if (!windowFocused) {
+                r.invites.filter { it.incoming && it.status == "pending" && it.id !in trayAnnounced }.forEach {
+                    systemNotices.tryEmit("Refiner's Fire" to "${it.name} challenges you to a 1v1")
+                }
+                r.incoming.filter { it.id !in trayAnnounced }.forEach { systemNotices.tryEmit("Refiner's Fire" to "${it.name} wants to connect") }
+            }
+            trayAnnounced = trayAnnounced + r.invites.map { it.id } + r.incoming.map { it.id }
             receiveChat(r.messages)
             announceChallenges(r.asyncChallenges)
             retryPendingResults()
@@ -318,10 +338,17 @@ class GameViewModel(
 
     fun quitToTitle() {
         click()
+        toTitle()
+    }
+
+    private fun toTitle() {
         persist()
         overlays = emptyList()
         screen = Screen.TITLE
+        engine = null
+        state = null
         savedGame = store.loadGame()
+        savedChallenge = store.loadChallengeGame()
     }
 
     // ---- Play ---------------------------------------------------------------------------------------------------
@@ -608,6 +635,21 @@ class GameViewModel(
         online.fetchLeaderboard()
     }
 
+    /** Hand the server this device's notification token once per session (or clear it when switched off). */
+    private fun registerPush() {
+        if (pushRegistered || !push.supported || online.account == null) return
+        pushRegistered = true
+        if (!settings.notifications) { online.setPushToken(""); return }
+        push.register { token -> post { if (settings.notifications) online.setPushToken(token) } }
+    }
+
+    fun setNotifications(on: Boolean) {
+        click()
+        updateSettings(settings.copy(notifications = on))
+        pushRegistered = false
+        registerPush()
+    }
+
     fun setHideActivity(hide: Boolean) {
         click()
         updateSettings(settings.copy(hideActivity = hide))
@@ -768,6 +810,7 @@ class GameViewModel(
         }
         store.saveAnnounced(announced)
         if (fresh.isNotEmpty()) notice = if (fresh.size == 1) fresh[0] else "${fresh.size} challenge updates. See Friends & 1v1."
+        if (fresh.isNotEmpty() && !windowFocused) systemNotices.tryEmit("Refiner's Fire" to (notice ?: fresh[0]))
     }
 
     // ---- Achievements -----------------------------------------------------------------------------------------------
@@ -919,6 +962,9 @@ class GameViewModel(
         unread = counts
         store.saveUnread(counts)
         if (open == null) audio.play(Sfx.HINT, 0.6f)
+        if (!windowFocused) for (from in messages.map { it.from }.distinct()) {
+            online.friends.firstOrNull { it.playerId == from }?.let { systemNotices.tryEmit("Refiner's Fire" to "New message from ${it.name}") }
+        }
     }
 
     fun openChat(friend: Friend) {
@@ -1152,7 +1198,9 @@ class GameViewModel(
         foreground = false
         stopLan()
         persist()
-        if (screen == Screen.GAME && overlay == null && state?.mode == GameMode.TIME_TRIAL) overlays = overlays + Overlay.Pause
+        // Closing or leaving the game saves it and goes back to the title, where Continue picks it up.
+        // A live match isn't left this way: that would forfeit it.
+        if (screen == Screen.GAME && match == null) toTitle()
         lastFrameNanos = 0L
     }
 

@@ -426,24 +426,22 @@ fun MatchOverPanel(vm: GameViewModel) {
 
 private fun clock(seconds: Int) = "${seconds / 60}:${(seconds % 60).toString().padStart(2, '0')}"
 
-/** Opponent's name, score and a live miniature of their board, plus the match clock. */
+/** The opponent at a glance: name, score, how they're doing and the clock. Their board is behind Peek. */
 @Composable
-fun OpponentCard(vm: GameViewModel, m: MatchSession, modifier: Modifier = Modifier, boardWidth: androidx.compose.ui.unit.Dp? = null) {
+fun OpponentCard(vm: GameViewModel, m: MatchSession, modifier: Modifier = Modifier) {
     val o = m.opp
     val t = vm.fx.now
     Column(
         modifier.drawBehind {
             drawBrassPlate(Offset.Zero, size, 12.dp.toPx(), rivets = false, dark = true)
-        }.padding(10.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+        }.padding(horizontal = 10.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(m.opponent?.name ?: "Opponent", style = bodyStyle(14.sp, Palette.goldLight, bold = true), maxLines = 1, modifier = Modifier.weight(1f))
             // Races and Survival have only a long safety cap, so the clock is shown for timed types.
             if (m.goal.timed) Text(clock(m.secondsLeft), style = bodyStyle(14.sp, if (m.secondsLeft < 30) Palette.ember else Palette.parchment, bold = true))
         }
-        Text(m.goal.label(m.difficulty), style = bodyStyle(11.sp, Palette.hint, bold = true))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text("${o.score}", style = bodyStyle(18.sp, Palette.ledOrange, bold = true), modifier = Modifier.weight(1f))
             val status = when {
@@ -453,24 +451,43 @@ fun OpponentCard(vm: GameViewModel, m: MatchSession, modifier: Modifier = Modifi
             }
             Text(status, style = bodyStyle(11.sp, if (!o.connected || o.over) Palette.ember else dim()))
         }
-        Canvas((if (boardWidth != null) Modifier.width(boardWidth) else Modifier.fillMaxWidth()).aspectRatio(COLS / ROWS.toFloat())) {
+        Text(m.goal.label(m.difficulty), style = bodyStyle(11.sp, Palette.hint, bold = true), maxLines = 1)
+        SmallBrass("Peek", { vm.push(Overlay.Peek) }, Modifier.fillMaxWidth())
+        if (vm.state?.gameOver == true) Text("Your forge overflowed. Watch ${m.opponent?.name ?: "them"} finish...", style = bodyStyle(11.sp, Palette.ember), textAlign = TextAlign.Center)
+        if (m.reconnecting) Text("Connection lost, reconnecting...", style = bodyStyle(11.sp, Palette.ember), textAlign = TextAlign.Center)
+    }
+}
+
+/** Peek: the opponent's board, over your own until you close it. */
+@Composable
+fun PeekPanel(vm: GameViewModel) {
+    val m = vm.match ?: return
+    val o = m.opp
+    GamePanel(m.opponent?.name ?: "Opponent", vm::pop, maxWidth = 620.dp) {
+        Text("${o.score} · Board ${o.board} · Forge ${o.forge}/3" + if (o.over) " · Out" else "", style = bodyStyle(14.sp, Palette.goldLight, bold = true))
+        val t = vm.fx.now
+        Canvas(Modifier.fillMaxWidth().aspectRatio(COLS / ROWS.toFloat())) {
             val cell = size.width / COLS
             for (i in 0 until ROWS * COLS) {
                 val tl = Offset((i % COLS) * cell, (i / COLS) * cell)
                 val gold = o.gold.getOrNull(i) == '1'
                 drawRect(if (gold) Palette.gold else Palette.lead, tl, Size(cell - 1f, cell - 1f))
                 MatchSession.decodeCell(o.cells.getOrElse(i) { MatchSession.EMPTY })?.let { p ->
-                    drawPiece(p, tl + Offset(cell / 2, cell / 2), cell * 1.1f, time = t)
+                    drawPiece(p, tl + Offset(cell / 2, cell / 2), cell, time = t)
                 }
             }
         }
-        if (vm.state?.gameOver == true) Text("Your forge overflowed. Watch ${m.opponent?.name ?: "them"} finish...", style = bodyStyle(11.sp, Palette.ember), textAlign = TextAlign.Center)
-        if (m.reconnecting) Text("Connection lost, reconnecting...", style = bodyStyle(11.sp, Palette.ember), textAlign = TextAlign.Center)
-        m.opponent?.let { ref -> vm.chatFriend(ref.playerId) }?.let { f ->
-            val n = vm.unread[f.playerId] ?: 0
-            SmallBrass(if (n > 0) "Chat ($n)" else "Chat", { vm.openChat(f) }, Modifier.fillMaxWidth())
-        }
+        BrassButton("Back to My Board", vm::pop, Modifier.fillMaxWidth())
     }
+}
+
+/** Chat with the opponent during a match (friends only), along the bottom of the screen. */
+@Composable
+fun MatchChatButton(vm: GameViewModel, modifier: Modifier = Modifier) {
+    val m = vm.match ?: return
+    val friend = m.opponent?.let { vm.chatFriend(it.playerId) } ?: return
+    val n = vm.unread[friend.playerId] ?: 0
+    SmallBrass(if (n > 0) "Chat with ${friend.name} ($n)" else "Chat with ${friend.name}", { vm.openChat(friend) }, modifier)
 }
 
 /** Big 3-2-1 over the board before a match starts. */

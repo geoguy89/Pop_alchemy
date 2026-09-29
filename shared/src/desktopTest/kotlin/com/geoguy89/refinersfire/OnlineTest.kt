@@ -14,6 +14,8 @@ import com.geoguy89.refinersfire.net.OnlineConfig
 import com.geoguy89.refinersfire.net.Sealed
 import com.geoguy89.refinersfire.ui.GameViewModel
 import com.geoguy89.refinersfire.ui.Overlay
+import com.geoguy89.refinersfire.ui.Screen
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
@@ -168,6 +170,13 @@ class OnlineTest {
         ann.match!!.stoke(1)
         until(ann, bob, what = "Bob is stoked") { bob.state!!.forge == bobForge + 1 }
         until(ann, bob, what = "Ann sees Bob's forge rise") { ann.match?.opp?.forge == bobForge + 1 }
+        // Leaving the app mid-match doesn't pull you out of it.
+        bob.onAppBackground(); bob.onAppForeground()
+        assertEquals(Screen.GAME, bob.screen)
+        assertNotNull(bob.match)
+        bob.push(Overlay.Peek)
+        shot(bob, "online_peek", phone = true)
+        bob.pop()
         shot(bob, "online_match_desktop")
         shot(bob, "online_match_phone", phone = true)
 

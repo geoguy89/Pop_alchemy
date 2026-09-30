@@ -24,7 +24,7 @@ data class Settings(
     /** Exchange own high scores with other copies of the game on the local network. */
     val lanShare: Boolean = true,
     /** Global: on the ranked leaderboard, open to challenges from other Global players, and scores passed on nearby. */
-    val sharePlus: Boolean = false,
+    val sharePlus: Boolean = true,
     /** Hide activity: the server keeps no record of when you play; friends see "Activity hidden". */
     val hideActivity: Boolean = false,
     /** Notifications for chats, challenges and friend requests when the game isn't on screen. */

@@ -7,8 +7,8 @@ A tile-matching puzzle for Android phones and Windows, **optimized for foldable 
 lead; fill a row or column and it turns to gold. Refine the whole board to move on. Play alone, against friends in
 real time, or send them a challenge to answer when they can.
 
-> **Want to play with more people?** New players start with scores shared only on their own Wi-Fi. To appear on the
-> Global leaderboard and find players anywhere, go to **Options → Share Scores → Global**.
+> **Play with people anywhere.** Scores are shared **Globally** from the start, so you're on the Global leaderboard
+> and other players can find and challenge you. Prefer to keep to yourself? See [Sharing and privacy](#sharing-and-privacy).
 
 | Title | Playing on a phone | Live 1v1 |
 |---|---|---|
@@ -106,8 +106,8 @@ Version**. You can also check any time in **Options → Check Now**.
 |---|---|---|
 | ![](docs/screenshots/match.png) | ![](docs/screenshots/peek.png) | ![](docs/screenshots/chat.png) |
 
-**Want more people to play against?** Go to **Options → Share Scores → Global**. You'll appear on the Global
-leaderboard, and you can challenge anyone on it.
+**Want more people to play against?** You're on the Global leaderboard from the start (**Options → Share Scores →
+Global**), and you can challenge anyone on it.
 
 ## Installing on Windows
 
@@ -213,17 +213,14 @@ Open **Friends & 1v1** from the title screen.
 
 **Options → Share Scores**:
 
-* **Off**: your scores stay on your device (friends you add still see them).
-* **Local**: swap high scores with anyone playing on the same Wi-Fi.
-* **Global**: you're on the ranked **Global leaderboard**. Other Global players can add you or challenge you, and you
-  them, without being friends first. Chat stays friends-only. **Choose this if you want to play with a wider
-  audience.**
-
-**Options → Hide my activity**: the game stops recording when you play. Friends see "Activity hidden" and you
-never show as online.
+* **Global** (the default): you're on the ranked **Global leaderboard**. Other Global players can add you or
+  challenge you, and you them, without being friends first. Chat stays friends-only.
+* **Local**: swap high scores only with people playing on the same Wi-Fi.
+* **Hide Activity**: your scores stay on your device (friends you add still see them), and the game stops recording
+  when you play. Friends see "Activity hidden" and you never show as online.
 
 To make friends and matches work, the game keeps your player name, friend code, high scores, friends and match
-results online. Your scores appear on the Global board only if you choose Global.
+results online. Your scores appear on the Global board only while Share Scores is set to Global.
 
 ## Themes, pieces and achievements
 
@@ -236,7 +233,7 @@ results online. Your scores appear on the Global board only if you choose Global
 * **Options → Pieces** uses any theme's pieces with any other theme.
 * Each board has its own engraving: the seal, the breastplate, day and night, the vine, the lampstand, the refiner's
   furnace, the anchor, the tablets and the rose of Sharon.
-* **160 achievements** to earn. They're never announced mid-game.
+* **189 achievements** to earn, from first steps to rare feats that take months. They're never announced mid-game.
 
 | Temple | Future | Achievements |
 |---|---|---|

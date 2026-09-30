@@ -66,6 +66,7 @@ class LanShareTest {
         net.link(tA, tB); net.link(tB, tC)
         fun device(t: FakeTransport, vararg own: HighScore): GameViewModel {
             val store = Store(MemoryKeyValueStore())
+            store.saveSettings(com.geoguy89.refinersfire.data.Settings(sharePlus = false))
             own.forEach { store.addHighScore(it) }
             return GameViewModel(store, SilentAudio, t).also { it.onAppForeground() }
         }

@@ -232,12 +232,6 @@ private fun OptionsPanel(vm: GameViewModel) {
                 style = bodyStyle(12.sp, Palette.parchment.copy(alpha = 0.7f)), textAlign = TextAlign.Center,
             )
         }
-        OptionSwitch("Hide my activity", s.hideActivity, switchColors) { vm.setHideActivity(it) }
-        Text(
-            if (s.hideActivity) "The server keeps no record of when you play. Friends see \"Activity hidden\" and you never show as online."
-            else "Friends can see when you're online and when you last played.",
-            style = bodyStyle(12.sp, Palette.parchment.copy(alpha = 0.7f)), textAlign = TextAlign.Center,
-        )
         if (vm.updater.supported) {
             OptionSwitch("Check for updates", s.checkUpdates, switchColors) { vm.click(); vm.updateSettings(s.copy(checkUpdates = it)) }
             BrassButton("Check Now", { vm.click(); vm.checkForUpdate(manual = true) }, Modifier.fillMaxWidth(), dark = true, fontSize = 14.sp, minHeight = 38.dp)
@@ -252,7 +246,7 @@ private fun OptionsPanel(vm: GameViewModel) {
         Choice(ShareMode.entries, vm.shareMode, { it.label }) { vm.setShareMode(it) }
         Text(
             when (vm.shareMode) {
-                ShareMode.OFF -> "Your scores stay on this device. Friends you add still see them."
+                ShareMode.HIDDEN -> "Your scores stay on this device (friends you add still see them). The server keeps no record of when you play: friends see \"Activity hidden\" and you never show as online."
                 ShareMode.LOCAL -> "Swap your own high scores with anyone playing on the same Wi-Fi. Nothing you receive is passed on, and yours go no further than the people you meet."
                 ShareMode.PLUS -> "Everything Local does, plus: you're on the ranked Global leaderboard, other Global players can add you or challenge you (and you them), and nearby Global players pass your scores on. Local-only players' scores are never passed on."
             },

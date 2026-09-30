@@ -86,7 +86,7 @@ sealed interface Overlay {
 }
 
 /** Local = nearby only, own scores only. Plus = Local+: pass on open scores and list yours on the global board. */
-enum class ShareMode(val label: String) { OFF("Off"), LOCAL("Local"), PLUS("Global") }
+enum class ShareMode(val label: String) { PLUS("Global"), LOCAL("Local"), HIDDEN("Hide Activity") }
 
 enum class HallTab(val label: String) { GLOBAL("Global"), FRIENDS("Friends"), NEARBY("Nearby"), MINE("Mine") }
 
@@ -583,14 +583,17 @@ class GameViewModel(
 
     val shareMode: ShareMode
         get() = when {
-            !settings.lanShare -> ShareMode.OFF
+            settings.hideActivity -> ShareMode.HIDDEN
             settings.sharePlus -> ShareMode.PLUS
             else -> ShareMode.LOCAL
         }
 
     fun setShareMode(mode: ShareMode) {
         click()
-        updateSettings(settings.copy(lanShare = mode != ShareMode.OFF, sharePlus = mode == ShareMode.PLUS))
+        val hide = mode == ShareMode.HIDDEN
+        // Hide Activity keeps scores on this device and stops the server recording when you play.
+        updateSettings(settings.copy(lanShare = !hide, sharePlus = mode == ShareMode.PLUS, hideActivity = hide))
+        online.setHideActivity(hide)
         if (mode == ShareMode.PLUS) {
             bump { it.copy(sharedGlobally = true) }
             online.ensureAccount(settings.playerName) { online.pushScores(highScores, true); online.sync() }

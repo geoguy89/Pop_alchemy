@@ -33,6 +33,8 @@ data class GameState(
     val hintsThisBoard: Int = 0,
     /** Stoke Duel: forge levels the rival stoked. Only clearing your own lines cools them, one level per line. */
     val stoked: Int = 0,
+    /** Wrong placements tried on the current piece (probing for a legal square instead of using a hint). */
+    val wrongTries: Int = 0,
     val score: Long = 0,
     val streak: Int = 0,
     val bestStreak: Int = 0,
@@ -354,10 +356,24 @@ class GameEngine(state: GameState) {
     }
 
     private fun withNextPiece(s: GameState): GameState {
-        val seed = s.matchSeed ?: return s.copy(current = drawPiece(s))
+        val seed = s.matchSeed ?: return s.copy(current = drawPiece(s), wrongTries = 0)
         // An empty board always gets the stone, without using up a piece of the shared sequence.
-        if (s.boardEmpty) return s.copy(current = Piece.Cornerstone)
-        return s.copy(current = matchPiece(seed, s.pieceIndex, s.board), pieceIndex = s.pieceIndex + 1)
+        if (s.boardEmpty) return s.copy(current = Piece.Cornerstone, wrongTries = 0)
+        return s.copy(current = matchPiece(seed, s.pieceIndex, s.board), pieceIndex = s.pieceIndex + 1, wrongTries = 0)
+    }
+
+    /**
+     * Register a tap on a square the current piece can't legally go: trying every square by hand shouldn't be a
+     * free substitute for the Hint button. Every two wrong tries on a piece stoke the forge one level (as a hint
+     * would); stoking a full forge ends the game.
+     */
+    fun registerMiss(): Boolean {
+        val s = state
+        if (s.gameOver) return false
+        val tries = s.wrongTries + 1
+        if (tries < 2) { state = s.copy(wrongTries = tries); return false }
+        state = s.copy(wrongTries = 0, forge = (s.forge + 1).coerceAtMost(FORGE_CAPACITY), gameOver = s.forge + 1 > FORGE_CAPACITY)
+        return true
     }
 
     private fun drawPiece(s: GameState): Piece {

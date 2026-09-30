@@ -156,6 +156,8 @@ Turning or folding the phone never loses your place.
 * **Hint**: lights up every square the current stone can go. It costs no points but stokes the forge: one level
   for the first hint on a board, two for the second (two hints per board at most). Until you clear that board, the forge can't cool below
   one level.
+* **Guessing instead of using a hint**: tapping a square the stone can't legally go isn't free either. Every second
+  wrong guess on a piece stokes the forge a level, the same as a hint would.
 * **Difficulty**: Easy starts on board 1, Average on board 6, Hard on board 11. **Strategic** has no clock; in
   **Time Trial** each stone must be placed before the hourglass runs out.
 

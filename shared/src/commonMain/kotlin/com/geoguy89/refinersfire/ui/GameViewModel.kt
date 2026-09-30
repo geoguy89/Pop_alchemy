@@ -374,6 +374,18 @@ class GameViewModel(
             fx.invalid(index)
             audio.play(Sfx.INVALID)
             _haptics.tryEmit(Haptic.REJECT)
+            // Probing squares by hand instead of using a hint isn't free: every second wrong try stokes the forge.
+            if (e.registerMiss()) {
+                state = e.state
+                forgeFlareAt = fx.now
+                if (e.state.gameOver) {
+                    fx.banner("Too many wrong guesses -- the forge overflowed!", Palette.lava, height = 0.42f, y = ROWS - 1.2f, duration = 2.4f)
+                    handle(listOf(GameEvent.GameOver), origin = -1)
+                } else {
+                    fx.banner("Wrong guesses stoke the forge", Palette.lava, height = 0.42f, y = ROWS - 1.2f, duration = 2.0f)
+                }
+                persist()
+            }
             return
         }
         handle(events, origin = index)

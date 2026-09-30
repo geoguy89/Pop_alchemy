@@ -140,6 +140,17 @@ class GameEngineTest {
     }
 
     @Test
+    fun wrongPlacementsStokeTheForgeEveryTwoTries() {
+        // A stone far from the only occupied neighbor has nowhere legal to go there.
+        val e = engineWith(redLapis) { c, _ -> c[index(3, 3)] = blueLapis }
+        assertTrue("illegal placement", e.play(index(0, 0)).isEmpty())
+        assertFalse("first wrong try: no penalty yet", e.registerMiss())
+        assertEquals(0, e.state.forge)
+        assertTrue("second wrong try: stokes the forge", e.registerMiss())
+        assertEquals(1, e.state.forge)
+    }
+
+    @Test
     fun stokedLevelsOnlyCoolByClearingLines() {
         // Row 0 is one stone short of full.
         var e = engineWith(Piece.Cornerstone) { c, _ -> for (col in 1 until COLS) c[index(0, col)] = redLapis }

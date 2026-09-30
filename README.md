@@ -10,7 +10,7 @@ real time, or send them a challenge to answer when they can.
 > **Want to play with more people?** New players start with scores shared only on their own Wi-Fi. To appear on the
 > Global leaderboard and find players anywhere, go to **Options → Share Scores → Global**.
 
-| Title | Playing on a phone | 1v1 match |
+| Title | Playing on a phone | Live 1v1 |
 |---|---|---|
 | ![](docs/screenshots/title.png) | ![](docs/screenshots/phone_game.png) | ![](docs/screenshots/match.png) |
 
@@ -62,6 +62,49 @@ Version**. You can also check any time in **Options → Check Now**.
 * **"There was a problem parsing the package"**: the download didn't finish. Delete the APK from Downloads and
   download it again.
 * **Nothing happens when you tap the APK**: open it from the **Files** app → **Downloads** instead.
+
+## Getting started
+
+### Your first game (solo)
+
+1. Open the game and choose a **player name**. Other players see you by this name.
+2. Tap **New Game** and pick a difficulty (**Easy**, **Average** or **Hard**) and a mode: **Strategic** (no clock) or
+   **Time Trial** (each stone has to be placed before the hourglass runs out).
+3. Your next stone appears at the bottom. Tap a square on the board to place it. It has to touch another stone, and
+   every stone it touches must match its **colour** or its **shape**.
+4. Fill a whole row or column and it clears, turning those squares to **gold**. Turn the whole board to gold to move
+   on to the next board.
+5. Can't place a stone? Tap **Discard!** to melt it in the **forge**. The forge holds three; discard with it full
+   and the game ends. Placing stones and clearing lines cools it down.
+6. Stuck? **Hint** lights up every square the stone can go, but it stokes the forge (see [How to play](#how-to-play)).
+7. Leave whenever you like. The game saves itself, and **Continue** on the title screen picks up where you left off.
+
+**How to Play** on the title screen walks through the rules with pictures.
+
+### Playing with a friend
+
+1. Tap **Friends & 1v1** on the title screen, then **Copy Code** and send your friend code (for example
+   `K7QM-3XPD-9HTW`) by text or email.
+2. Your friend types it into **Their friend code** on the same screen, and you both accept. They now appear in your friends list, with a
+   green dot when they're online and your record against them (games won and lost).
+3. **If they're online**, tap **Challenge 1v1**, choose the match type and difficulty, and send it. They get a
+   pop-up (or a phone notification) to accept, and the match starts for both of you with the same stones in the same
+   order.
+4. **If they're offline**, tap **Poke**. Their phone gets a notification that you'd like to play. Or tap **Send
+   Challenge** to play a run now that they can try to beat later, any time within a week.
+5. During a live match:
+   * The bar at the top shows your rival's score, board and forge, plus the clock or goal.
+   * Tap **Peek** to see their board, then **Back to My Board** to carry on. Your game keeps going while you peek.
+   * Tap **Chat with…** at the bottom of the screen to message them without leaving the match.
+6. **Chat** with any friend from the friends list, in or out of a match. Messages are encrypted so only the two of
+   you can read them.
+
+| Live 1v1 | Peek at your rival | Chat |
+|---|---|---|
+| ![](docs/screenshots/match.png) | ![](docs/screenshots/peek.png) | ![](docs/screenshots/chat.png) |
+
+**Want more people to play against?** Go to **Options → Share Scores → Global**. You'll appear on the Global
+leaderboard, and you can challenge anyone on it.
 
 ## Installing on Windows
 
@@ -156,6 +199,9 @@ Open **Friends & 1v1** from the title screen.
   run. They're told "beat 4,250" next time they open the game, and play the exact same run whenever they like within
   a week. The higher score wins.
 * **Chat** with any friend, in or out of a match. Only the two of you can read it.
+* **Poke**: when a friend is offline, Poke sends a notification to their phone asking if they're up for a 1v1 (once
+  every 10 minutes per friend).
+* **Removing a friend** asks you to confirm first, so it can't happen by accident.
 * **Notifications**: when the game isn't open, your phone tells you about new messages ("New message from Sam"),
   challenges and friend requests. The notification never includes what the message says. Turn them off in
   **Options → Notifications**.

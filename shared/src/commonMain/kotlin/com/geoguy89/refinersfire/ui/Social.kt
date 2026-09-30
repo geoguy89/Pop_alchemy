@@ -136,12 +136,13 @@ fun FriendsPanel(vm: GameViewModel) {
 @Composable
 private fun FriendRow(vm: GameViewModel, f: Friend, myBest: Long) {
     val pending = vm.online.invites.firstOrNull { !it.incoming && it.playerId == f.playerId && it.status == "pending" }
+    var confirmRemove by rememberSaveable(f.playerId) { mutableStateOf(false) }
     Column(Modifier.fillMaxWidth().drawBehind { drawRect(Color.Black, alpha = 0.18f) }.padding(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             FriendBadge(Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
             Text(f.name, style = bodyStyle(16.sp, bold = true), modifier = Modifier.weight(1f), maxLines = 1)
-            Text("${f.wins}W ${f.losses}L" + if (f.ties > 0) " ${f.ties}T" else "", style = bodyStyle(12.sp, Palette.goldLight, bold = true))
+            Text("${f.wins} won · ${f.losses} lost" + if (f.ties > 0) " · ${f.ties} tied" else "", style = bodyStyle(12.sp, Palette.goldLight, bold = true))
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(9.dp).background(if (f.online) Color(0xFF3DDC6A) else Palette.stone, RoundedCornerShape(50)))
@@ -175,7 +176,14 @@ private fun FriendRow(vm: GameViewModel, f: Friend, myBest: Long) {
             }
             val unread = vm.unread[f.playerId] ?: 0
             SmallBrass(if (unread > 0) "Chat ($unread)" else "Chat", { vm.openChat(f) }, Modifier.weight(0.6f))
-            BrassButton("Remove", { vm.removeFriend(f) }, Modifier.weight(0.6f), dark = true, fontSize = 13.sp, minHeight = 38.dp)
+            BrassButton("Remove", { confirmRemove = true }, Modifier.weight(0.6f), dark = true, fontSize = 13.sp, minHeight = 38.dp)
+        }
+        if (confirmRemove) {
+            Text("Remove ${f.name} from your friends?", style = bodyStyle(12.sp, Palette.ember))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                BrassButton("Yes, Remove", { confirmRemove = false; vm.removeFriend(f) }, Modifier.weight(1f), dark = true, fontSize = 13.sp, minHeight = 38.dp)
+                SmallBrass("Cancel", { confirmRemove = false }, Modifier.weight(1f))
+            }
         }
         if (!f.online && pending == null) Text("Live matches need them online; Poke sends them a notification. A challenge they can play any time.", style = bodyStyle(11.sp, dim()))
         SmallBrass("Send Challenge", { vm.push(Overlay.AsyncSetup(Rival(f.playerId, f.name, f.online, friend = true))) }, Modifier.fillMaxWidth())

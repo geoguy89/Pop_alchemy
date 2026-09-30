@@ -27,7 +27,7 @@ compose.desktop {
         jvmArgs += listOf(
             "-Xmx512m",
             // Shown in Options. CI sets the build number.
-            "-Drefiners.version=2.1.3",
+            "-Drefiners.version=2.1.4",
             "-Drefiners.build=${System.getenv("REFINERS_BUILD_NUMBER") ?: "0"}",
         )
 
@@ -35,7 +35,7 @@ compose.desktop {
             targetFormats(TargetFormat.Msi, TargetFormat.Exe, TargetFormat.Dmg, TargetFormat.Deb)
             // The upgradeUuid below is unchanged, so installs of the old name upgrade in place.
             packageName = "Refiners Fire"
-            packageVersion = "2.1.3"
+            packageVersion = "2.1.4"
             description = "Refiner's Fire: burn away the dross"
             vendor = "geoguy89"
             copyright = "Fonts under the SIL OFL. Scripture from the NLT, Tyndale House Foundation."

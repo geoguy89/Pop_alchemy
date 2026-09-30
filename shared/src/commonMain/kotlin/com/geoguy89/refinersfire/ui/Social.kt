@@ -167,13 +167,17 @@ private fun FriendRow(vm: GameViewModel, f: Friend, myBest: Long) {
                 SmallBrass("Waiting... (cancel)", { vm.cancelChallenge(pending.id) }, Modifier.weight(1f))
             } else {
                 // A friend who hides their activity can't be seen online, so the challenge is always allowed; it pops up if they're playing.
-                SmallBrass("Challenge 1v1", { vm.push(Overlay.Challenge(Rival(f.playerId, f.name, f.online, friend = true))) }, Modifier.weight(1f), enabled = f.online || f.activityHidden)
+                if (f.online || f.activityHidden) {
+                    SmallBrass("Challenge 1v1", { vm.push(Overlay.Challenge(Rival(f.playerId, f.name, f.online, friend = true))) }, Modifier.weight(1f))
+                } else {
+                    SmallBrass("Poke", { vm.poke(f) }, Modifier.weight(1f))
+                }
             }
             val unread = vm.unread[f.playerId] ?: 0
             SmallBrass(if (unread > 0) "Chat ($unread)" else "Chat", { vm.openChat(f) }, Modifier.weight(0.6f))
             BrassButton("Remove", { vm.removeFriend(f) }, Modifier.weight(0.6f), dark = true, fontSize = 13.sp, minHeight = 38.dp)
         }
-        if (!f.online && pending == null) Text("Live matches need them online. A challenge they can play any time.", style = bodyStyle(11.sp, dim()))
+        if (!f.online && pending == null) Text("Live matches need them online; Poke sends them a notification. A challenge they can play any time.", style = bodyStyle(11.sp, dim()))
         SmallBrass("Send Challenge", { vm.push(Overlay.AsyncSetup(Rival(f.playerId, f.name, f.online, friend = true))) }, Modifier.fillMaxWidth())
     }
 }

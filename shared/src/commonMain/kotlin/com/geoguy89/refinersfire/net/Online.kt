@@ -364,6 +364,11 @@ class OnlineService(
         send<Unit>("POST", "/v1/profile", encode(ProfileBody.serializer(), ProfileBody(publicKey = publicKey)), null)
     }
 
+    /** Nudge an offline friend (a phone notification) to come online for a 1v1. */
+    fun poke(playerId: String, onError: (String) -> Unit, onOk: () -> Unit) {
+        send<Unit>("POST", "/v1/poke", "{\"playerId\":\"$playerId\"}", null, onError = onError, onOk = { onOk() })
+    }
+
     fun sendChat(to: String, sealed: Sealed, onError: (String) -> Unit) {
         send<Unit>("POST", "/v1/chat/send", encode(ChatBody.serializer(), ChatBody(to, sealed.nonce, sealed.ct)), null, onError = onError)
     }

@@ -990,6 +990,11 @@ class GameViewModel(
         lastSync = -100f
     }
 
+    fun poke(friend: Friend) {
+        click()
+        online.poke(friend.playerId, onError = { notice = it }, onOk = { notice = "Poked ${friend.name}. They'll get a notification." })
+    }
+
     fun chatFriend(id: String): Friend? = online.friends.firstOrNull { it.playerId == id }
 
     /** The number both friends can compare to be sure the chat is private. */

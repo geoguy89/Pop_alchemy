@@ -48,6 +48,7 @@ import com.geoguy89.refinersfire.net.MatchSession
 import com.geoguy89.refinersfire.net.NoHttp
 import com.geoguy89.refinersfire.net.NoLanTransport
 import com.geoguy89.refinersfire.net.OnlineService
+import com.geoguy89.refinersfire.DebugLog
 import com.geoguy89.refinersfire.net.NoPush
 import com.geoguy89.refinersfire.net.PushRegistrar
 import kotlinx.coroutines.channels.BufferOverflow
@@ -78,6 +79,7 @@ sealed interface Overlay {
     data class Chat(val friendId: String) : Overlay
     data object Achievements : Overlay
     data object ChangeName : Overlay
+    data object ReportBug : Overlay
     data object Update : Overlay
     data object Peek : Overlay
     data class AsyncSetup(val rival: Rival) : Overlay
@@ -191,8 +193,13 @@ class GameViewModel(
     private var updateOffered = false
 
     /** A short message for the player ("Request sent", errors). Cleared by [dismissNotice]. */
-    var notice by mutableStateOf<String?>(null)
-        private set
+    private var noticeState by mutableStateOf<String?>(null)
+    var notice: String?
+        get() = noticeState
+        private set(value) {
+            if (value != null) com.geoguy89.refinersfire.DebugLog.add("notice: $value")
+            noticeState = value
+        }
     /** Set when the notice is about a new chat message: the toast then offers to open that chat. */
     private var noticeChat: Pair<String, String>? = null
     /** The friend whose new message the current notice is about, if it is one. */
@@ -295,6 +302,7 @@ class GameViewModel(
     }
 
     fun startNewGame(difficulty: Difficulty, mode: GameMode) {
+        DebugLog.add("new game: ${difficulty.name.lowercase()}, ${mode.name.lowercase()}")
         click()
         updateSettings(settings.copy(difficulty = difficulty, mode = mode))
         val e = GameEngine.newGame(difficulty, mode)
@@ -993,6 +1001,23 @@ class GameViewModel(
         store.saveUnread(unread)
         overlays = overlays + Overlay.Chat(friend.playerId)
         lastSync = -100f
+    }
+
+    var bugSending by mutableStateOf(false)
+        private set
+
+    fun reportBug(text: String) {
+        click()
+        bugSending = true
+        val s = settings
+        val info = "${com.geoguy89.refinersfire.AppVersion.label} · ${screen.name.lowercase()} · theme ${s.theme.name.lowercase()} · share ${shareMode.label}" +
+            (state?.let { " · board ${it.board}, forge ${it.forge}, ${it.difficulty.name.lowercase()}" } ?: "") + (if (match != null) " · in 1v1" else "")
+        DebugLog.add("bug report: $info")
+        online.ensureAccount(s.playerName) {
+            online.reportBug(text, info, DebugLog.dump(),
+                onError = { bugSending = false; notice = it },
+                onOk = { bugSending = false; pop(); notice = "Thanks! Your report was sent." })
+        }
     }
 
     fun poke(friend: Friend) {

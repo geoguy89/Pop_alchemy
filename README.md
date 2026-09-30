@@ -62,6 +62,8 @@ Version**. You can also check any time in **Options → Check Now**.
 * **"There was a problem parsing the package"**: the download didn't finish. Delete the APK from Downloads and
   download it again.
 * **Nothing happens when you tap the APK**: open it from the **Files** app → **Downloads** instead.
+* **Found a bug in the game?** Open **Options → Report a Bug**, describe what happened and tap **Send**. Your
+  player name, the game version and a short log of recent activity go with it (never your chats).
 
 ## Getting started
 

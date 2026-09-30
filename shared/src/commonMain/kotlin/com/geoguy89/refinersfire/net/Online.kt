@@ -281,6 +281,9 @@ class OnlineService(
     ) {
         http.request(method, url + path, body, auth() + ("Content-Type" to "application/json")) { code, text ->
             post {
+                if (code !in 200..299 || !(method == "GET" && path.startsWith("/v1/sync"))) {
+                    com.geoguy89.refinersfire.DebugLog.add("$method ${path.substringBefore('?')} -> ${if (code == -1) "unreachable" else code}")
+                }
                 reachable = code != -1
                 if (code == 401 && account != null) {
                     account = null
@@ -362,6 +365,16 @@ class OnlineService(
 
     fun publishKey(publicKey: String) {
         send<Unit>("POST", "/v1/profile", encode(ProfileBody.serializer(), ProfileBody(publicKey = publicKey)), null)
+    }
+
+    /** Sends a bug report (the player's note, a line of device info and the recent log) to the developer. */
+    fun reportBug(text: String, info: String, log: String, onError: (String) -> Unit, onOk: () -> Unit) {
+        val body = kotlinx.serialization.json.buildJsonObject {
+            put("text", kotlinx.serialization.json.JsonPrimitive(text))
+            put("info", kotlinx.serialization.json.JsonPrimitive(info))
+            put("log", kotlinx.serialization.json.JsonPrimitive(log))
+        }.toString()
+        send<Unit>("POST", "/v1/bug", body, null, onError = onError, onOk = { onOk() })
     }
 
     /** Nudge an offline friend (a phone notification) to come online for a 1v1. */

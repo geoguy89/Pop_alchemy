@@ -165,6 +165,7 @@ fun OverlayHost(vm: GameViewModel) {
         Overlay.MatchOver -> MatchOverPanel(vm)
         is Overlay.Chat -> ChatPanel(vm, o.friendId)
         Overlay.ChangeName -> NamePanel(vm, firstTime = false)
+        Overlay.ReportBug -> ReportBugPanel(vm)
         Overlay.Update -> UpdatePanel(vm)
         Overlay.Peek -> PeekPanel(vm)
         is Overlay.AsyncSetup -> AsyncSetupPanel(vm, o.rival)
@@ -252,8 +253,37 @@ private fun OptionsPanel(vm: GameViewModel) {
             },
             style = bodyStyle(12.sp, Palette.parchment.copy(alpha = 0.7f)), textAlign = TextAlign.Center,
         )
+        BrassButton("Report a Bug", { vm.click(); vm.push(Overlay.ReportBug) }, Modifier.fillMaxWidth(), dark = true, fontSize = 14.sp, minHeight = 38.dp)
         BrassButton("Done", vm::pop, Modifier.fillMaxWidth())
         Text(com.geoguy89.refinersfire.AppVersion.label, style = bodyStyle(11.sp, Palette.parchment.copy(alpha = 0.55f)), textAlign = TextAlign.Center)
+    }
+}
+
+@Composable
+private fun ReportBugPanel(vm: GameViewModel) {
+    var text by rememberSaveable { mutableStateOf("") }
+    GamePanel("Report a Bug", vm::pop) {
+        Text("What went wrong? What were you doing when it happened?", style = bodyStyle(14.sp), textAlign = TextAlign.Center)
+        OutlinedTextField(
+            text, { text = it.take(1500) }, minLines = 4, maxLines = 8,
+            label = { Text("Describe the problem", style = bodyStyle(12.sp)) },
+            textStyle = bodyStyle(15.sp),
+            keyboardOptions = KeyboardOptions(capitalization = androidx.compose.ui.text.input.KeyboardCapitalization.Sentences),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = Palette.gold, unfocusedBorderColor = Palette.brassDark, cursorColor = Palette.goldLight,
+                focusedLabelColor = Palette.goldLight, unfocusedLabelColor = Palette.parchment,
+                focusedTextColor = Palette.parchment, unfocusedTextColor = Palette.parchment,
+            ),
+            modifier = Modifier.fillMaxWidth(),
+        )
+        Text(
+            "Your player name, the game version and a short log of what the app did recently are sent with it. Chats are never included.",
+            style = bodyStyle(12.sp, Palette.parchment.copy(alpha = 0.7f)), textAlign = TextAlign.Center,
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            BrassButton("Cancel", vm::pop, Modifier.weight(1f), dark = true)
+            BrassButton(if (vm.bugSending) "Sending..." else "Send", { vm.reportBug(text.trim()) }, Modifier.weight(1f), enabled = text.isNotBlank() && !vm.bugSending)
+        }
     }
 }
 

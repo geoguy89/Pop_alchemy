@@ -27,6 +27,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -97,6 +98,8 @@ fun HandSlot(vm: GameViewModel, state: GameState, modifier: Modifier = Modifier,
     }
 }
 
+private val StokeBlue = Color(0xFF4AA8FF)
+
 /** The forge: an egg-shaped crucible whose molten level rises with each discard. Tapping it discards. */
 @Composable
 fun Forge(vm: GameViewModel, state: GameState, modifier: Modifier = Modifier, showLabel: Boolean = true) {
@@ -139,6 +142,13 @@ fun Forge(vm: GameViewModel, state: GameState, modifier: Modifier = Modifier, sh
                     close()
                 }
                 drawPath(lava, Brush.verticalGradient(listOf(Color(0xFFFFD27A), Palette.ember, Palette.lava, Color(0xFF6A0E06)), surface, inner.bottom))
+                // Levels a rival stoked (Stoke Duel) burn blue, underneath your own.
+                if (state.stoked > 0) {
+                    val stokeTop = inner.bottom - inner.height * (0.06f + 0.9f * state.stoked / FORGE_CAPACITY.toFloat())
+                    clipRect(top = maxOf(stokeTop, surface - inner.height * 0.03f)) {
+                        drawPath(lava, Brush.verticalGradient(listOf(Color(0xFFB8E6FF), StokeBlue, Color(0xFF1B3F9E), Color(0xFF0B1850)), surface, inner.bottom))
+                    }
+                }
                 // Crusty dark patches drifting on the melt.
                 for (k in 0 until 7) {
                     val px = inner.left + inner.width * ((k * 0.37f + t * 0.03f * (1 + k % 3)) % 1f)
@@ -177,10 +187,12 @@ fun Forge(vm: GameViewModel, state: GameState, modifier: Modifier = Modifier, sh
                 val ly = egg.bottom - egg.height * (0.25f + 0.25f * k)
                 val lc = Offset(egg.right + w * 0.02f, ly)
                 val on = state.forge > k
+                val lamp = if (k < state.stoked) StokeBlue else Palette.ember
+                val deep = if (k < state.stoked) Color(0xFF1B3F9E) else Palette.lava
                 drawCircle(Color(0xFF1C130C), w * 0.055f, lc)
                 if (on) {
-                    drawCircle(Palette.ember, w * 0.1f, lc, alpha = 0.25f)
-                    drawCircle(Brush.radialGradient(listOf(Color.White, Palette.ember, Palette.lava), lc - Offset(w * 0.015f, w * 0.015f), w * 0.06f), w * 0.042f, lc)
+                    drawCircle(lamp, w * 0.1f, lc, alpha = 0.25f)
+                    drawCircle(Brush.radialGradient(listOf(Color.White, lamp, deep), lc - Offset(w * 0.015f, w * 0.015f), w * 0.06f), w * 0.042f, lc)
                 } else {
                     drawCircle(Color(0xFF3A2A1C), w * 0.038f, lc)
                 }

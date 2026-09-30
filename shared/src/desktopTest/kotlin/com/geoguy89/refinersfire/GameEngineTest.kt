@@ -133,6 +133,13 @@ class GameEngineTest {
     }
 
     @Test
+    fun stokingPastAFullForgeEndsTheGame() {
+        val e = engineWith(redLapis, forge = 3)
+        e.stoke(1)
+        assertTrue(e.state.gameOver)
+    }
+
+    @Test
     fun stokedLevelsOnlyCoolByClearingLines() {
         // Row 0 is one stone short of full.
         var e = engineWith(Piece.Cornerstone) { c, _ -> for (col in 1 until COLS) c[index(0, col)] = redLapis }
@@ -332,12 +339,13 @@ class GameEngineTest {
     }
 
     @Test
-    fun stokingRaisesTheForgeButNeverEndsTheGame() {
-        val e = engineWith(redTurquoise, forge = 2)
-        assertEquals(1, e.stoke(2))
+    fun stokingRaisesTheForgeAndOverflowEndsTheGame() {
+        val e = engineWith(redTurquoise, forge = 1)
+        assertEquals(2, e.stoke(2))
         assertEquals(3, e.state.forge)
-        assertEquals("already full", 0, e.stoke(1))
         assertFalse(e.state.gameOver)
+        e.stoke(1)
+        assertTrue("stoked past the top", e.state.gameOver)
     }
 
     @Test

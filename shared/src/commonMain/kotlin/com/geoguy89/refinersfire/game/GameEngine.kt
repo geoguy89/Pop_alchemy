@@ -316,12 +316,12 @@ class GameEngine(state: GameState) {
         return LineBonus(row, col, perfect, (if (perfect) PERFECT_LINE_BONUS else SYMBOL_LINE_BONUS) * multiplier)
     }
 
-    /** Stoke Duel: the opponent's cleared line raises our forge (never past full; it can't end the game by itself). */
+    /** Stoke Duel: the opponent's cleared line raises our forge. Stoking a full forge past the top ends the game. */
     fun stoke(levels: Int): Int {
         val s = state
         if (s.gameOver) return 0
         val next = (s.forge + levels).coerceAtMost(FORGE_CAPACITY)
-        state = s.copy(forge = next, stoked = s.stoked + (next - s.forge))
+        state = s.copy(forge = next, stoked = s.stoked + (next - s.forge), gameOver = s.forge + levels > FORGE_CAPACITY)
         return next - s.forge
     }
 

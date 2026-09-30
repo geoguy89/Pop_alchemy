@@ -1055,7 +1055,12 @@ class GameViewModel(
                 forgeFlareAt = fx.now
                 audio.play(Sfx.HAMMER_APPEAR, 0.8f)
                 _haptics.tryEmit(Haptic.HEAVY)
-                fx.banner(if (added > 0) "$who stoked your forge! +$added" else "$who stoked your forge, but it's already full", Palette.lava, height = 0.42f, y = ROWS - 1.2f, duration = 2.2f)
+                if (e?.state?.gameOver == true) {
+                    fx.banner("$who stoked your forge past the top!", Palette.lava, height = 0.42f, y = ROWS - 1.2f, duration = 2.2f)
+                    handle(listOf(GameEvent.GameOver), origin = -1)
+                } else {
+                    fx.banner("$who stoked your forge! +$added", Palette.lava, height = 0.42f, y = ROWS - 1.2f, duration = 2.2f)
+                }
                 match?.report(e?.state ?: return@MatchSession)
             },
         )

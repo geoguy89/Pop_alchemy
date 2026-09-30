@@ -194,7 +194,7 @@ Open **Friends & 1v1** from the title screen.
   | **Race** | First to reach Board N |
   | **Score Rush** | First to the target score |
   | **Survival** | No clock: the first forge to overflow loses |
-  | **Stoke Duel** | Timed. Every line you clear stokes your rival's forge up a level (a shape or perfect line stokes it twice). Stoked levels don't cool as you place stones: only clearing your own lines cools them, one level per line, and while your forge is stoked your clears can't stoke your rival back |
+  | **Stoke Duel** | Timed. Every line you clear stokes your rival's forge up a level (a shape or perfect line stokes it twice). Stoked levels don't cool as you place stones: only clearing your own lines cools them, one level per line, and while your forge is stoked your clears can't stoke your rival back. Stoked levels glow blue in your forge, and being stoked past the top loses the match |
 
   If you lose connection, the game reconnects on its own; leave for too long and the match is forfeited. (Switching
   away during a live match doesn't send you to the title screen; come straight back to keep playing.)

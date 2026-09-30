@@ -91,7 +91,7 @@ class PushService : FirebaseMessagingService() {
             .build()
         val nm = getSystemService(NotificationManager::class.java)
         // One notification per sender and kind, updated rather than stacked.
-        nm.notify("$kind:${message.data["from"]}".hashCode(), n)
+        nm.notify("$kind:${message.data["sender"]}".hashCode(), n)
     }
 
     override fun onNewToken(token: String) {

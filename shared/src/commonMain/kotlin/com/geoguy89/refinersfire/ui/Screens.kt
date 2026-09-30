@@ -140,6 +140,14 @@ fun OverlayHost(vm: GameViewModel) {
         Overlay.HighScores -> HighScoresPanel(vm)
         Overlay.HowToPlay -> HowToPlayPanel(vm)
         Overlay.Pause -> PausePanel(vm)
+        Overlay.ConfirmAbandonMatch -> GamePanel("Abandon Match?", vm::pop) {
+            val rival = vm.match?.opponent?.name ?: "Your opponent"
+            Text("$rival wins the match automatically.", style = bodyStyle(), textAlign = TextAlign.Center)
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                BrassButton("Keep Playing", vm::pop, Modifier.weight(1f), dark = true)
+                BrassButton("Abandon", vm::leaveMatch, Modifier.weight(1f))
+            }
+        }
         Overlay.ConfirmQuit -> GamePanel("Abandon Game?", vm::pop) {
             Text("Your progress on this game will be lost.", style = bodyStyle(), textAlign = TextAlign.Center)
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -336,7 +344,9 @@ private fun PausePanel(vm: GameViewModel) {
         vm.state?.let { StatsTable(it) }
         val m = Modifier.fillMaxWidth()
         BrassButton("Resume", vm::pop, m)
-        BrassButton("New Game", { vm.push(Overlay.ConfirmQuit) }, m, dark = true)
+        // A live match can't be saved and resumed: quitting abandons it.
+        val inMatch = vm.match != null
+        if (!inMatch) BrassButton("New Game", { vm.push(Overlay.ConfirmQuit) }, m, dark = true)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             BrassButton("How to Play", { vm.push(Overlay.HowToPlay) }, Modifier.weight(1f), dark = true, fontSize = 14.sp)
             BrassButton("Hall of Fame", { vm.openHallOfFame() }, Modifier.weight(1f), dark = true, fontSize = 14.sp)
@@ -345,7 +355,8 @@ private fun PausePanel(vm: GameViewModel) {
             BrassButton("Options", { vm.push(Overlay.Options) }, Modifier.weight(1f), dark = true, fontSize = 14.sp)
             BrassButton("Achievements", vm::openAchievements, Modifier.weight(1f), dark = true, fontSize = 14.sp)
         }
-        BrassButton("Save & Quit to Title", vm::quitToTitle, m, dark = true)
+        if (inMatch) BrassButton("Abandon Match", { vm.push(Overlay.ConfirmAbandonMatch) }, m, dark = true)
+        else BrassButton("Save & Quit to Title", vm::quitToTitle, m, dark = true)
     }
 }
 

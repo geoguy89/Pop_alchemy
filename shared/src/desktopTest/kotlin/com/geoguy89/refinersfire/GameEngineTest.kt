@@ -133,6 +133,33 @@ class GameEngineTest {
     }
 
     @Test
+    fun stokedLevelsOnlyCoolByClearingLines() {
+        // Row 0 is one stone short of full.
+        var e = engineWith(Piece.Cornerstone) { c, _ -> for (col in 1 until COLS) c[index(0, col)] = redLapis }
+        assertEquals(2, e.stoke(2))
+        e.play(index(4, 4)) // no line: stoked levels stay
+        assertEquals("placing doesn't cool a stoke", 2, e.state.forge)
+        e = GameEngine(e.state.copy(current = Piece.Cornerstone))
+        val events = e.play(index(0, 0)) // clears row 0
+        val clear = events.filterIsInstance<GameEvent.LinesCleared>().single()
+        assertTrue("a clear while stoked doesn't stoke back", clear.coolsStoke)
+        assertEquals("one line cools one stoked level", 1, e.state.forge)
+        assertEquals(1, e.state.stoked)
+    }
+
+    @Test
+    fun ownDiscardsStillCoolOnPlacementButNotBelowTheStoke() {
+        var e = engineWith(redLapis, forge = 1) { c, _ -> c[index(3, 3)] = redTurquoise }
+        e.stoke(1)
+        assertEquals(2, e.state.forge)
+        e.play(index(3, 4))
+        assertEquals(1, e.state.forge)
+        e = GameEngine(e.state.copy(current = Piece.Cornerstone))
+        e.play(index(3, 5))
+        assertEquals(1, e.state.forge)
+    }
+
+    @Test
     fun hintsStokeTheForgeUntilTheBoardIsCleared() {
         var e = engineWith(Piece.Cornerstone)
         e.useHint()

@@ -31,6 +31,8 @@ data class GameState(
     val forge: Int = 0,
     /** Hints used on the current board: while any are, the forge can't cool below one level. */
     val hintsThisBoard: Int = 0,
+    /** Stoke Duel: forge levels the rival stoked. Only clearing your own lines cools them, one level per line. */
+    val stoked: Int = 0,
     val score: Long = 0,
     val streak: Int = 0,
     val bestStreak: Int = 0,
@@ -73,6 +75,8 @@ sealed interface GameEvent {
         val removed: Map<Int, Piece>,
         val newlyGold: List<Int>,
         val points: Long,
+        /** True if this clear went to cooling levels a rival stoked (Stoke Duel): it doesn't stoke them back. */
+        val coolsStoke: Boolean = false,
         /** Same-symbol and same-symbol-and-colour lines in this clear. Included in [points]. */
         val bonuses: List<LineBonus> = emptyList(),
     ) : GameEvent
@@ -215,7 +219,8 @@ class GameEngine(state: GameState) {
             if (streak % STREAK_MILESTONE == 0) events += GameEvent.StreakMilestone(streak)
         }
         val forgeFloor = if (s.hintsThisBoard > 0) 1 else 0
-        var forge = (s.forge - 1).coerceAtLeast(minOf(forgeFloor, s.forge))
+        var stoked = s.stoked
+        var forge = (s.forge - 1).coerceAtLeast(minOf(maxOf(forgeFloor, stoked), s.forge))
 
         // Completed rows and columns.
         val fullRows = (0 until ROWS).filter { r -> (0 until COLS).all { c -> cells[index(r, c)] != null } }
@@ -236,11 +241,16 @@ class GameEngine(state: GameState) {
             val pts = LINE_POINTS * lines * s.multiplier + bonuses.sumOf { it.points }
             score += pts
             linesCleared += lines
-            events += GameEvent.LinesCleared(fullRows, fullCols, removed, newlyGold, pts, bonuses)
+            events += GameEvent.LinesCleared(fullRows, fullCols, removed, newlyGold, pts, coolsStoke = s.stoked > 0, bonuses = bonuses)
+            // Each cleared line cools one stoked level before anything else.
+            val cooled = minOf(stoked, lines)
+            stoked -= cooled
+            forge = minOf(forge, s.forge - cooled).coerceAtLeast(maxOf(minOf(forgeFloor, s.forge), stoked))
             // A cleared line empties the forge -- unless it finished the board, which only lowers it one level.
             if (!gold.all { it }) {
-                if (forge > forgeFloor) events += GameEvent.ForgeEmptied
-                forge = minOf(forge, forgeFloor)
+                val floor = maxOf(forgeFloor, stoked)
+                if (forge > floor) events += GameEvent.ForgeEmptied
+                forge = minOf(forge, floor)
             }
         }
 
@@ -248,6 +258,7 @@ class GameEngine(state: GameState) {
             cells = cells,
             gold = gold,
             forge = forge,
+            stoked = stoked,
             score = score,
             streak = streak,
             bestStreak = maxOf(s.bestStreak, streak),
@@ -310,7 +321,7 @@ class GameEngine(state: GameState) {
         val s = state
         if (s.gameOver) return 0
         val next = (s.forge + levels).coerceAtMost(FORGE_CAPACITY)
-        state = s.copy(forge = next)
+        state = s.copy(forge = next, stoked = s.stoked + (next - s.forge))
         return next - s.forge
     }
 

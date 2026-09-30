@@ -192,7 +192,8 @@ private fun FriendRow(vm: GameViewModel, f: Friend, myBest: Long) {
 
 @Composable
 fun ChallengePanel(vm: GameViewModel, friend: Rival) {
-    var difficulty by rememberSaveable { mutableStateOf(vm.settings.difficulty) }
+    // Live 1v1 is Average or Hard only.
+    var difficulty by rememberSaveable { mutableStateOf(if (vm.settings.difficulty == Difficulty.EASY) Difficulty.AVERAGE else vm.settings.difficulty) }
     var type by rememberSaveable { mutableStateOf(MatchType.TIMED) }
     var value by rememberSaveable { mutableStateOf(MatchType.TIMED.default) }
     val goal = MatchGoal(type.id, if (value in type.values) value else type.default)
@@ -200,7 +201,7 @@ fun ChallengePanel(vm: GameViewModel, friend: Rival) {
         Text("You both play the same difficulty and get the same pieces in the same order.", style = bodyStyle(14.sp), textAlign = TextAlign.Center)
         SectionTitle("Difficulty")
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-            for (d in Difficulty.entries) BrassButton(d.displayName, { vm.click(); difficulty = d }, Modifier.weight(1f), dark = d != difficulty, fontSize = 15.sp)
+            for (d in Difficulty.entries.filter { it != Difficulty.EASY }) BrassButton(d.displayName, { vm.click(); difficulty = d }, Modifier.weight(1f), dark = d != difficulty, fontSize = 15.sp)
         }
         SectionTitle("Match type")
         for (row in MatchType.entries.chunked(3)) Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {

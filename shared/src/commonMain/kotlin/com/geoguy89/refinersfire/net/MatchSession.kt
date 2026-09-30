@@ -249,6 +249,8 @@ class MatchSession(
     fun leave() {
         leaving = true
         reconnectAt = null
+        // Leaving a live match resigns it: the opponent wins straight away rather than after the reconnect window.
+        if (phase != MatchPhase.ENDED) socket?.send("""{"t":"resign"}""")
         socket?.close()
         if (phase != MatchPhase.ENDED) phase = MatchPhase.FAILED
     }

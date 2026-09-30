@@ -66,6 +66,7 @@ sealed interface Overlay {
     data object HowToPlay : Overlay
     data object Pause : Overlay
     data object ConfirmQuit : Overlay
+    data object ConfirmAbandonMatch : Overlay
     data class BoardComplete(val event: GameEvent.BoardCleared) : Overlay
     data class GameOver(val final: GameState, val qualifies: Boolean) : Overlay
     data object Friends : Overlay
@@ -378,7 +379,7 @@ class GameViewModel(
 
     /** The hint is useless on an empty board (every square is legal) and is charged once per piece. */
     val hintAvailable: Boolean
-        get() = boardInteractive && !hintShown && state?.boardEmpty == false &&
+        get() = boardInteractive && !hintShown && state?.boardEmpty == false && match == null &&
             (state?.hintsThisBoard ?: 0) < GameEngine.MAX_HINTS_PER_BOARD
 
     fun useHint() {
@@ -415,7 +416,8 @@ class GameViewModel(
             is GameEvent.LinesCleared -> {
                 val lines = ev.rows.size + ev.cols.size
                 // Stoke Duel: each line stokes the rival once; a symbol or perfect line stokes twice.
-                match?.stoke(if (ev.bonuses.isNotEmpty()) 2 else 1)
+                // While your own forge is stoked, clears go to cooling it and don't stoke the rival.
+                if (!ev.coolsStoke) match?.stoke(if (ev.bonuses.isNotEmpty()) 2 else 1)
                 fx.linesCleared(origin, ev.removed, ev.newlyGold, ev.points, lines)
                 audio.play(if (lines > 1) Sfx.MULTI_LINE else Sfx.LINE_CLEAR)
                 _haptics.tryEmit(Haptic.CONFIRM)

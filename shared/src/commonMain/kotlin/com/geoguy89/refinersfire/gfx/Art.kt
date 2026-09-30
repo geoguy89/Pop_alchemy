@@ -200,18 +200,6 @@ fun DrawScope.drawSeal(center: Offset, radius: Float, time: Float, alpha: Float)
         drawCircle(c, radius, center, alpha = a, style = Stroke(w * 1.6f))
         drawCircle(c, radius * 0.86f, center, alpha = a, style = Stroke(w))
         drawCircle(c, radius * 0.58f, center, alpha = a, style = Stroke(w))
-        // Interlocking triangles.
-        for (k in 0..1) {
-            val tri = Path()
-            for (i in 0..2) {
-                val ang = (-PI / 2 + k * PI + i * 2 * PI / 3).toFloat()
-                val pt = center + Offset(cos(ang), sin(ang)) * radius * 0.58f
-                if (i == 0) tri.moveTo(pt.x, pt.y) else tri.lineTo(pt.x, pt.y)
-            }
-            tri.close()
-            drawPath(tri, c, alpha = a, style = Stroke(w))
-        }
-        drawCircle(c, radius * 0.29f, center, alpha = a, style = Stroke(w))
         // Radiating ticks.
         for (i in 0 until 48) {
             val ang = (i * 2 * PI / 48).toFloat()
@@ -219,6 +207,7 @@ fun DrawScope.drawSeal(center: Offset, radius: Float, time: Float, alpha: Float)
             drawLine(c, center + d * radius * 0.86f, center + d * radius * (if (i % 4 == 0) 0.80f else 0.83f), w * 0.8f, alpha = a)
         }
     }
+    drawSealCross(center, radius * 0.5f, alpha)
     // The twelve signs ring the seal, turning ever so slowly.
     val glyphSize = radius * 0.13f
     Glyph.entries.forEachIndexed { i, g ->
@@ -231,6 +220,36 @@ fun DrawScope.drawSeal(center: Offset, radius: Float, time: Float, alpha: Float)
             }
         }
     }
+}
+
+/** A raised cross at the heart of the seal: drop shadow, bevelled faces, and a lit upper edge. */
+private fun DrawScope.drawSealCross(center: Offset, half: Float, alpha: Float) {
+    val bar = half * 0.28f
+    val armY = center.y - half * 0.32f
+    val armHalf = half * 0.68f
+    fun cross(o: Offset = Offset.Zero, grow: Float = 0f) = Path().apply {
+        val l = center.x - bar / 2 - grow + o.x; val r = center.x + bar / 2 + grow + o.x
+        val t = center.y - half - grow + o.y; val b = center.y + half + grow + o.y
+        val al = center.x - armHalf - grow + o.x; val ar = center.x + armHalf + grow + o.x
+        val at = armY - bar / 2 - grow + o.y; val ab = armY + bar / 2 + grow + o.y
+        moveTo(l, t); lineTo(r, t); lineTo(r, at); lineTo(ar, at); lineTo(ar, ab); lineTo(r, ab)
+        lineTo(r, b); lineTo(l, b); lineTo(l, ab); lineTo(al, ab); lineTo(al, at); lineTo(l, at); close()
+    }
+    val depth = half * 0.06f
+    // Shadow, then the side walls (stacked offsets), then the face.
+    drawPath(cross(Offset(depth * 1.6f, depth * 2.2f), depth * 0.4f), Color.Black, alpha = 0.45f * alpha)
+    for (i in 4 downTo 1) drawPath(cross(Offset(depth * i / 4f, depth * i / 4f)), Color(0xFF2A2320), alpha = 0.9f * alpha)
+    drawPath(
+        cross(),
+        Brush.linearGradient(
+            listOf(Color(0xFFF1E3C0), Color(0xFFC9A96B), Color(0xFF8A6A3A)),
+            Offset(center.x - armHalf, center.y - half), Offset(center.x + armHalf, center.y + half),
+        ),
+        alpha = 0.85f * alpha,
+    )
+    // Inner bevel line and a bright upper-left edge.
+    drawPath(cross(grow = -bar * 0.18f), Color.Black, alpha = 0.18f * alpha, style = Stroke(half * 0.012f))
+    drawPath(cross(Offset(-half * 0.006f, -half * 0.006f)), Color.White, alpha = 0.35f * alpha, style = Stroke(half * 0.014f))
 }
 
 /** A brass plate with bevel and optional corner rivets. */

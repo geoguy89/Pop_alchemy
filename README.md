@@ -87,7 +87,8 @@ Version**. You can also check any time in **Options → Check Now**.
    `K7QM-3XPD-9HTW`) by text or email.
 2. Your friend types it into **Their friend code** on the same screen, and you both accept. They now appear in your friends list, with a
    green dot when they're online and your record against them (games won and lost).
-3. **If they're online**, tap **Challenge 1v1**, choose the match type and difficulty, and send it. They get a
+3. **If they're online**, tap **Challenge 1v1**, choose the match type and difficulty (**Average** or **Hard**), and
+   send it. They get a
    pop-up (or a phone notification) to accept, and the match starts for both of you with the same stones in the same
    order.
 4. **If they're offline**, tap **Poke**. Their phone gets a notification that you'd like to play. Or tap **Send
@@ -96,6 +97,8 @@ Version**. You can also check any time in **Options → Check Now**.
    * The bar at the top shows your rival's score, board and forge, plus the clock or goal.
    * Tap **Peek** to see their board, then **Back to My Board** to carry on. Your game keeps going while you peek.
    * Tap **Chat with…** at the bottom of the screen to message them without leaving the match.
+   * Hints are switched off in live matches.
+   * To quit, open **Menu → Abandon Match**. Your rival wins the match straight away.
 6. **Chat** with any friend from the friends list, in or out of a match. Messages are encrypted so only the two of
    you can read them.
 
@@ -191,7 +194,7 @@ Open **Friends & 1v1** from the title screen.
   | **Race** | First to reach Board N |
   | **Score Rush** | First to the target score |
   | **Survival** | No clock: the first forge to overflow loses |
-  | **Stoke Duel** | Timed, and every line you clear stokes your rival's forge up a level (a shape or perfect line stokes it twice) |
+  | **Stoke Duel** | Timed. Every line you clear stokes your rival's forge up a level (a shape or perfect line stokes it twice). Stoked levels don't cool as you place stones: only clearing your own lines cools them, one level per line, and while your forge is stoked your clears can't stoke your rival back |
 
   If you lose connection, the game reconnects on its own; leave for too long and the match is forfeited. (Switching
   away during a live match doesn't send you to the title screen; come straight back to keep playing.)

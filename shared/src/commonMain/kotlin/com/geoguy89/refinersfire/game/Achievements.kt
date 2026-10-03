@@ -52,6 +52,10 @@ data class LifetimeStats(
     val foresightBoards: Int = 0,
     val puzzlesSolved: Int = 0,
     val puzzleStars: Int = 0,
+    val coopGames: Int = 0,
+    val bestCoopScore: Long = 0,
+    val gatheringsPlayed: Int = 0,
+    val gatheringWins: Int = 0,
 )
 
 enum class AchievementCategory(val title: String) {
@@ -197,6 +201,12 @@ object Achievements {
         tiers("win-streak", V, listOf(3, 5, 10), listOf("Hot Hand", "Unstoppable", "Invincible"),
             { "Win $it matches in a row" }) { it.bestMatchWinStreak.toLong() }
         one("race-win", "Photo Finish", "Win a Race match", V) { it.raceWins > 0 }
+        tiers("coop", V, listOf(1, 10), listOf("Two Are Better Than One", "A Cord of Three Strands"),
+            { "Finish $it co-op games" }) { it.coopGames.toLong() }
+        one("coop-5000", "Bear One Another's Burdens", "Score 5,000 together in co-op", V) { it.bestCoopScore >= 5000 }
+        one("gathering", "Where Two or Three Gather", "Play in a Gathering", V) { it.gatheringsPlayed > 0 }
+        tiers("gathering-wins", V, listOf(1, 5), listOf("First Among Many", "A Great Multitude"),
+            { "Win $it Gatherings" }) { it.gatheringWins.toLong() }
         one("timed-win", "Beat the Clock", "Win a Timed match", V) { it.timedWins > 0 }
         one("match-perfect", "Showboat", "Clear a perfect line during a 1v1 match", V) { it.perfectLineInMatch }
         tiers("async", V, listOf(1, 10), listOf("Pen Pal", "Correspondent Chess"),

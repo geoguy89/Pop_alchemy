@@ -32,6 +32,14 @@ data class OpponentView(
 @Serializable
 data class PlayerRef(val playerId: String, val name: String)
 
+/** A player in a gathering: whether they're connected yet. */
+@Serializable
+data class LobbyPlayer(val playerId: String, val name: String, val connected: Boolean = false)
+
+/** One co-op move, as the server relays it to both players in order. */
+@Serializable
+data class CoopMove(val seq: Int, val kind: String, val index: Int = -1, val by: String, val auto: Boolean = false)
+
 @Serializable
 private data class StateMsg(
     val t: String = "state",
@@ -72,6 +80,20 @@ private data class ServerMsg(
     val you: StateSnapshot? = null,
     val forfeitInMs: Long? = null,
     val n: Int? = null,
+    // Gatherings
+    val players: List<LobbyPlayer>? = null,
+    val host: String? = null,
+    val playerId: String? = null,
+    val peers: Map<String, StateSnapshot>? = null,
+    // Co-op
+    val turn: String? = null,
+    val turnEndsInMs: Long? = null,
+    val seq: Int? = null,
+    val kind: String? = null,
+    val index: Int? = null,
+    val by: String? = null,
+    val auto: Boolean? = null,
+    val moves: List<CoopMove>? = null,
 )
 
 @Serializable
@@ -86,7 +108,14 @@ private data class StateSnapshot(
     val gold: String = "",
 )
 
-data class MatchResult(val reason: String, val won: Boolean?, val myScore: Long, val theirScore: Long)
+data class MatchResult(
+    val reason: String,
+    val won: Boolean?,
+    val myScore: Long,
+    val theirScore: Long,
+    /** Gatherings: everyone's final score, best first (names as the lobby knew them). */
+    val standings: List<Pair<String, Long>> = emptyList(),
+)
 
 /**
  * One live 1v1 match over the relay. Socket events arrive through [post] on the UI thread. The clock is kept
@@ -104,8 +133,12 @@ class MatchSession(
     private val onOpponentCleared: (board: Int, score: Long) -> Unit = { _, _ -> },
     /** Stoke Duel: the opponent cleared a line and stoked us [levels] times. */
     private val onStoked: (levels: Int) -> Unit = {},
+    /** Co-op: a move (by either player) to apply to the shared game, in order. */
+    private val onCoopMove: (CoopMove) -> Unit = {},
+    /** What kind of match we're joining, until the server says (a gathering shows its lobby straight away). */
+    initialGoal: MatchGoal = MatchGoal(),
 ) {
-    var goal by mutableStateOf(MatchGoal())
+    var goal by mutableStateOf(initialGoal)
         private set
     var phase by mutableStateOf(MatchPhase.CONNECTING)
         private set
@@ -128,6 +161,29 @@ class MatchSession(
         private set
     var forfeitAt by mutableStateOf<Float?>(null)
         private set
+    /** Gatherings: everyone invited (host first), who's here, and how the others are doing. */
+    var roster by mutableStateOf<List<LobbyPlayer>>(emptyList())
+        private set
+    var host by mutableStateOf<String?>(null)
+        private set
+    var peers by mutableStateOf<Map<String, OpponentView>>(emptyMap())
+        private set
+    /** Co-op: whose turn it is and when it times out; moves applied so far (also the next move's number). */
+    var turn by mutableStateOf<String?>(null)
+        private set
+    var turnEndsAt by mutableStateOf(0f)
+        private set
+    var coopApplied by mutableStateOf(0)
+        private set
+    /** Co-op: a move of ours is on its way to the server (don't send another until it's back). */
+    var moveInFlight by mutableStateOf(false)
+        private set
+    val isCoop: Boolean get() = goal.coop
+    val isGathering: Boolean get() = goal.gathering
+    val isHost: Boolean get() = host == myId
+    val isMyTurn: Boolean get() = isCoop && turn == myId
+    val turnSecondsLeft: Int get() = ((turnEndsAt - now()).coerceAtLeast(0f) + 0.999f).toInt()
+    val me: String get() = myId
     private var lastSent: StateMsg? = null
     private var started = false
 
@@ -181,6 +237,26 @@ class MatchSession(
                 opponent = m.opponent
                 if (phase == MatchPhase.CONNECTING) phase = MatchPhase.WAITING
             }
+            "lobby" -> {
+                goal = MatchGoal("gathering", goal.value)
+                roster = m.players ?: roster
+                host = m.host ?: host
+                if (phase == MatchPhase.CONNECTING) phase = MatchPhase.WAITING
+            }
+            "peer" -> {
+                val id = m.playerId ?: return
+                val old = peers[id] ?: OpponentView()
+                peers = peers + (id to OpponentView(
+                    score = m.score ?: old.score, board = m.board ?: old.board, cleared = m.cleared ?: old.cleared, forge = m.forge ?: old.forge,
+                    over = m.over ?: old.over, connected = m.connected ?: old.connected,
+                ))
+            }
+            "move" -> {
+                val mv = CoopMove(m.seq ?: return, m.kind ?: return, m.index ?: -1, m.by ?: return, m.auto == true)
+                turn = m.turn ?: turn
+                turnEndsAt = now() + (m.turnEndsInMs ?: 0) / 1000f
+                deliver(mv)
+            }
             "start", "resume" -> {
                 opponent = m.opponent ?: opponent
                 difficulty = m.difficulty ?: difficulty
@@ -191,11 +267,19 @@ class MatchSession(
                 startsAt = now() + startIn
                 endsAt = startsAt + remaining
                 m.opp?.let { opp = it.toView() }
+                m.players?.let { list -> roster = list.map { p -> roster.firstOrNull { it.playerId == p.playerId }?.copy(name = p.name) ?: p } }
+                m.peers?.let { map -> peers = map.mapValues { (_, v) -> v.toView() } }
+                if (m.turn != null) {
+                    turn = m.turn
+                    turnEndsAt = now() + (m.turnEndsInMs ?: 0) / 1000f
+                }
                 forfeitAt = null
                 if (!started) {
                     started = true
                     onStart(m.seed ?: 0, difficulty, mode, m.t == "resume")
                 }
+                // A reconnect brings every co-op move; apply the ones we missed.
+                m.moves?.forEach { deliver(it) }
                 phase = if (m.you?.over == true) MatchPhase.OUT else if (startIn > 0) MatchPhase.COUNTDOWN else MatchPhase.PLAYING
                 // A resumed connection may have missed our last move.
                 lastSent?.let { socket?.send(wireJson.encodeToString(StateMsg.serializer(), it)) }
@@ -220,11 +304,14 @@ class MatchSession(
             "end" -> {
                 val scores = m.scores
                 fun scoreOf(id: String?) = id?.let { scores?.get(it)?.jsonPrimitive?.content?.toLongOrNull() } ?: 0L
+                val names = roster.associate { it.playerId to it.name } + listOfNotNull(opponent?.let { it.playerId to it.name })
+                val standings = scores?.keys?.map { id -> (if (id == myId) "You" else names[id] ?: "Refiner") to scoreOf(id) }?.sortedByDescending { it.second } ?: emptyList()
                 result = MatchResult(
                     reason = m.reason ?: "time",
                     won = m.winner?.let { it == myId },
                     myScore = scoreOf(myId),
-                    theirScore = scoreOf(opponent?.playerId),
+                    theirScore = if (isGathering) standings.firstOrNull { it.first != "You" }?.second ?: 0 else scoreOf(opponent?.playerId),
+                    standings = standings,
                 )
                 phase = MatchPhase.ENDED
                 reconnecting = false
@@ -245,6 +332,26 @@ class MatchSession(
         lastSent = msg
         socket?.send(wireJson.encodeToString(StateMsg.serializer(), msg))
         if (s.gameOver && phase == MatchPhase.PLAYING) phase = MatchPhase.OUT
+    }
+
+    /** Co-op: hand a move to the game in order, once each. */
+    private fun deliver(mv: CoopMove) {
+        if (mv.seq != coopApplied) return // Already applied (or out of order: the next resume brings the rest).
+        coopApplied++
+        if (mv.by == myId) moveInFlight = false
+        onCoopMove(mv)
+    }
+
+    /** Co-op: ask to make a move on our turn. It's applied when the server relays it back (to both of us). */
+    fun sendMove(kind: String, index: Int = -1) {
+        if (!isMyTurn || moveInFlight || phase != MatchPhase.PLAYING) return
+        moveInFlight = true
+        socket?.send("""{"t":"move","seq":$coopApplied,"kind":"$kind","index":$index}""")
+    }
+
+    /** Gathering host: start now with whoever's here. */
+    fun go() {
+        if (isGathering && isHost && phase == MatchPhase.WAITING) socket?.send("""{"t":"go"}""")
     }
 
     /** Stoke Duel: tell the server we cleared a line worth [levels] stokes. */

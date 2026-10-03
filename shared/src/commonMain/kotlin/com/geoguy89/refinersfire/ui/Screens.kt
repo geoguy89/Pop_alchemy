@@ -188,6 +188,7 @@ fun OverlayHost(vm: GameViewModel) {
         is Overlay.AsyncDone -> AsyncDonePanel(vm, o)
         Overlay.Achievements -> AchievementsPanel(vm)
         Overlay.Manna -> MannaPanel(vm)
+        Overlay.GatheringSetup -> GatheringSetupPanel(vm)
         Overlay.Puzzles -> PuzzlesPanel(vm)
         is Overlay.PuzzleDone -> PuzzleDonePanel(vm, o)
         is Overlay.MannaDone -> MannaDonePanel(vm, o)
@@ -368,7 +369,9 @@ private fun PausePanel(vm: GameViewModel) {
             BrassButton("Options", { vm.push(Overlay.Options) }, Modifier.weight(1f), dark = true, fontSize = 14.sp)
             BrassButton("Achievements", vm::openAchievements, Modifier.weight(1f), dark = true, fontSize = 14.sp)
         }
-        if (inMatch) BrassButton("Abandon Match", { vm.push(Overlay.ConfirmAbandonMatch) }, m, dark = true)
+        val group = vm.match?.let { it.isCoop || it.isGathering } == true
+        if (inMatch && group) BrassButton(if (vm.match?.isCoop == true) "Leave Co-op" else "Leave Gathering", vm::leaveMatch, m, dark = true)
+        else if (inMatch) BrassButton("Abandon Match", { vm.push(Overlay.ConfirmAbandonMatch) }, m, dark = true)
         else if (!inPuzzle) BrassButton("Save & Quit to Title", vm::quitToTitle, m, dark = true)
     }
 }

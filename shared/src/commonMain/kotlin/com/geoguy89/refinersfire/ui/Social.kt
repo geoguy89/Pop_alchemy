@@ -123,6 +123,11 @@ fun FriendsPanel(vm: GameViewModel) {
 
             ChallengesSection(vm)
 
+            if (online.friends.size >= 2) {
+                BrassButton("Start a Gathering", { vm.click(); vm.push(Overlay.GatheringSetup) }, Modifier.fillMaxWidth(), dark = true, fontSize = 15.sp)
+                Text("Play the same stones as 2-7 friends at once.", style = bodyStyle(12.sp, dim()), textAlign = TextAlign.Center)
+            }
+
             SectionTitle("Friends")
             if (online.friends.isEmpty()) {
                 Text("No friends yet. Share your code, or add someone from the Global or Nearby Hall of Fame.", style = bodyStyle(13.sp, dim()), textAlign = TextAlign.Center)
@@ -164,6 +169,7 @@ private fun FriendRow(vm: GameViewModel, f: Friend, myBest: Long) {
             else -> "Best ${f.best} · tied with you"
         }
         Text(rivalry, style = bodyStyle(12.sp, dim()))
+        if (f.coopBest > 0) Text("Best together in co-op: ${f.coopBest}", style = bodyStyle(12.sp, Palette.hint))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             if (pending != null) {
                 SmallBrass("Waiting... (cancel)", { vm.cancelChallenge(pending.id) }, Modifier.weight(1f))
@@ -219,7 +225,7 @@ fun ChallengePanel(vm: GameViewModel, friend: Rival) {
         }
         Text(MATCH_MODE_BLURBS.getValue(mode), style = bodyStyle(12.sp, dim()), textAlign = TextAlign.Center)
         SectionTitle("Match type")
-        for (row in MatchType.entries.chunked(3)) Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+        for (row in MatchType.entries.filter { it != MatchType.GATHERING }.chunked(3)) Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
             for (t in row) BrassButton(t.title, { vm.click(); type = t; value = t.default }, Modifier.weight(1f), dark = t != type, fontSize = 13.sp, minHeight = 40.dp)
             repeat(3 - row.size) { Box(Modifier.weight(1f)) }
         }
@@ -393,22 +399,6 @@ fun AsyncDonePanel(vm: GameViewModel, o: Overlay.AsyncDone) {
 // ---- Match overlays -----------------------------------------------------------------------------------------------
 
 @Composable
-fun MatchLobbyPanel(vm: GameViewModel) {
-    val m = vm.match ?: return
-    GamePanel("1v1 Match", null) {
-        val who = m.opponent?.name ?: "your opponent"
-        Text(
-            when (m.phase) {
-                MatchPhase.CONNECTING -> "Connecting to the match..."
-                else -> "Waiting for $who to join..."
-            },
-            style = bodyStyle(16.sp), textAlign = TextAlign.Center,
-        )
-        BrassButton("Leave", vm::leaveMatch, Modifier.fillMaxWidth(), dark = true)
-    }
-}
-
-@Composable
 fun ConfirmLeaveMatchPanel(vm: GameViewModel) {
     GamePanel("Leave the Match?", vm::pop) {
         Text("Leaving now forfeits the match to ${vm.match?.opponent?.name ?: "your opponent"}.", style = bodyStyle(), textAlign = TextAlign.Center)
@@ -423,6 +413,7 @@ fun ConfirmLeaveMatchPanel(vm: GameViewModel) {
 fun MatchOverPanel(vm: GameViewModel) {
     val m = vm.match ?: return
     val r = m.result ?: return
+    if (m.isCoop || m.isGathering) { GroupResultPanel(vm, m); return }
     val who = m.opponent?.name ?: "Opponent"
     val title = when (r.won) { true -> "Victory!"; false -> "Defeat"; null -> "A Draw" }
     GamePanel(title, null) {
@@ -513,6 +504,7 @@ fun PeekPanel(vm: GameViewModel) {
 @Composable
 fun MatchChatButton(vm: GameViewModel, modifier: Modifier = Modifier) {
     val m = vm.match ?: return
+    if (m.isGathering) return
     val friend = m.opponent?.let { vm.chatFriend(it.playerId) } ?: return
     val n = vm.unread[friend.playerId] ?: 0
     SmallBrass(if (n > 0) "Chat with ${friend.name} ($n)" else "Chat with ${friend.name}", { vm.openChat(friend) }, modifier)
@@ -525,7 +517,14 @@ fun MatchCountdown(vm: GameViewModel) {
     if (m.phase != MatchPhase.COUNTDOWN) return
     Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.45f)), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("vs ${m.opponent?.name ?: ""}", style = bodyStyle(20.sp, Palette.parchment, bold = true))
+            Text(
+                when {
+                    m.isGathering -> "Gathering of ${m.roster.size}"
+                    m.isCoop -> "Co-op with ${m.opponent?.name ?: ""}"
+                    else -> "vs ${m.opponent?.name ?: ""}"
+                },
+                style = bodyStyle(20.sp, Palette.parchment, bold = true),
+            )
             Text("${m.countdown.coerceAtLeast(1)}", style = titleStyle(96.sp))
         }
     }
@@ -539,7 +538,8 @@ fun IncomingBanner(vm: GameViewModel) {
     val online = vm.online
     val invite = online.invites.firstOrNull { it.incoming && it.status == "pending" }
     val request = online.incoming.firstOrNull()
-    if (vm.match != null || (invite == null && request == null)) return
+    val gathering = online.gatherings.firstOrNull { it.myStatus == "invited" && it.hostId != online.account?.playerId }
+    if (vm.match != null || (invite == null && request == null && gathering == null)) return
     Box(Modifier.fillMaxSize().safeDrawingPadding().padding(10.dp), contentAlignment = Alignment.TopCenter) {
         Column(
             Modifier.widthIn(max = 520.dp).fillMaxWidth().clickable(enabled = false) {}.drawBehind {
@@ -548,9 +548,23 @@ fun IncomingBanner(vm: GameViewModel) {
             verticalArrangement = Arrangement.spacedBy(8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            if (invite != null) {
+            if (gathering != null) {
+                Text("${gathering.hostName} invites you to a Gathering of ${gathering.players.size}!", style = bodyStyle(15.sp, Palette.goldLight, bold = true), textAlign = TextAlign.Center)
+                Text(
+                    "${gathering.difficulty.displayName} · ${gathering.minutes} minutes" + if (gathering.mode != GameMode.STRATEGIC) " · ${gathering.mode.displayName}" else "",
+                    style = bodyStyle(13.sp, Palette.parchment),
+                )
+                if (vm.screen == Screen.GAME) Text("Your current game is saved.", style = bodyStyle(12.sp, dim()))
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    SmallBrass("Join", { vm.respondToGathering(gathering.id, true) }, Modifier.weight(1f))
+                    BrassButton("Decline", { vm.respondToGathering(gathering.id, false) }, Modifier.weight(1f), dark = true, fontSize = 14.sp, minHeight = 38.dp)
+                }
+            } else if (invite != null) {
                 val article = if (invite.difficulty.displayName.first().lowercaseChar() in "aeiou") "an" else "a"
-                Text("${invite.name} challenges you to $article ${invite.difficulty.displayName} 1v1!", style = bodyStyle(15.sp, Palette.goldLight, bold = true), textAlign = TextAlign.Center)
+                Text(
+                    if (invite.goal.coop) "${invite.name} invites you to play co-op!" else "${invite.name} challenges you to $article ${invite.difficulty.displayName} 1v1!",
+                    style = bodyStyle(15.sp, Palette.goldLight, bold = true), textAlign = TextAlign.Center,
+                )
                 Text(
                     invite.goal.label(invite.difficulty) + if (invite.mode != GameMode.STRATEGIC) " · ${invite.mode.displayName}" else "",
                     style = bodyStyle(13.sp, Palette.parchment),

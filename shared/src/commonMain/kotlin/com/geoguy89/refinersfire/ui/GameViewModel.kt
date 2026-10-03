@@ -80,6 +80,8 @@ sealed interface Overlay {
     data class Challenge(val rival: Rival) : Overlay
     data class PlayerCard(val entry: LeaderboardEntry) : Overlay
     data object MatchLobby : Overlay
+    /** Pick friends and settings for a gathering. */
+    data object GatheringSetup : Overlay
     data object ConfirmLeaveMatch : Overlay
     data object MatchOver : Overlay
     data class Chat(val friendId: String) : Overlay
@@ -398,6 +400,19 @@ class GameViewModel(
     fun tapCell(index: Int) {
         val e = engine ?: return
         if (!boardInteractive) return
+        val m = match
+        if (m != null && m.isCoop) {
+            if (!m.isMyTurn) { fx.banner("It's ${m.opponent?.name ?: "your partner"}'s turn", Palette.parchment, height = 0.34f, y = ROWS - 1.7f, duration = 1.2f); return }
+            if (m.moveInFlight) return
+            if (e.canPlay(e.state.current, index)) m.sendMove("play", index)
+            else {
+                fx.invalid(index)
+                audio.play(Sfx.INVALID)
+                _haptics.tryEmit(Haptic.REJECT)
+                m.sendMove("miss")
+            }
+            return
+        }
         val events = e.play(index)
         if (events.isEmpty()) {
             fx.invalid(index)
@@ -423,17 +438,26 @@ class GameViewModel(
     fun discard() {
         val e = engine ?: return
         if (!boardInteractive) return
+        val m = match
+        if (m != null && m.isCoop) {
+            if (m.isMyTurn) m.sendMove("discard")
+            else fx.banner("It's ${m.opponent?.name ?: "your partner"}'s turn", Palette.parchment, height = 0.34f, y = ROWS - 1.7f, duration = 1.2f)
+            return
+        }
         handle(e.discard(), origin = -1)
     }
 
     /** The hint is useless on an empty board (every square is legal) and is charged once per piece. */
     val hintAvailable: Boolean
-        get() = boardInteractive && !hintShown && state?.boardEmpty == false && match == null &&
+        get() = boardInteractive && !hintShown && state?.boardEmpty == false &&
+            (match == null || (match!!.isCoop && match!!.isMyTurn && !match!!.moveInFlight)) &&
             (state?.hintsThisBoard ?: 0) < GameEngine.MAX_HINTS_PER_BOARD
 
     fun useHint() {
         val e = engine ?: return
         if (!hintAvailable) return
+        // Co-op: the hint stokes the shared forge, so it goes through the turn like any move.
+        match?.takeIf { it.isCoop }?.let { it.sendMove("hint"); return }
         val cells = e.useHint()
         bump { it.copy(hintsUsed = it.hintsUsed + 1) }
         hintShown = true
@@ -456,7 +480,8 @@ class GameViewModel(
 
     /** The Hint button's label: how many are left, or why there are none. */
     val hintLabel: String get() = when {
-        match != null -> "No Hints in 1v1"
+        match?.isGathering == true -> "No Hints Here"
+        match != null && !match!!.isCoop -> "No Hints in 1v1"
         hintsLeft == 0 -> "No Hints Left"
         else -> "Hint · $hintsLeft left"
     }
@@ -675,6 +700,15 @@ class GameViewModel(
         offerUpdate()
         match?.let { m ->
             m.tick()
+            if (m.phase == MatchPhase.ENDED && overlay != Overlay.MatchOver && (m.isCoop || m.isGathering)) {
+                val r = m.result
+                bump {
+                    if (m.isCoop) it.copy(coopGames = it.coopGames + 1, bestCoopScore = maxOf(it.bestCoopScore, r?.myScore ?: 0))
+                    else it.copy(gatheringsPlayed = it.gatheringsPlayed + 1, gatheringWins = it.gatheringWins + if (r?.won == true) 1 else 0)
+                }
+                audio.play(if (r?.won == true || m.isCoop) Sfx.BOARD_CLEAR else Sfx.GAME_OVER)
+                overlays = listOf(Overlay.MatchOver)
+            }
             if (m.phase == MatchPhase.ENDED && overlay != Overlay.MatchOver) {
                 val r = m.result
                 bump {
@@ -778,7 +812,67 @@ class GameViewModel(
 
     fun respondToChallenge(id: String, accept: Boolean) {
         click()
-        online.respondToInvite(id, accept, onMatch = ::joinMatch) { notice = it }
+        online.respondToInvite(id, accept, onMatch = { joinMatch(it) }) { notice = it }
+    }
+
+    // ---- Gatherings --------------------------------------------------------------------------------------------------
+
+    /** Invite 2-7 friends; the host goes straight to the lobby. */
+    fun createGathering(friendIds: List<String>, difficulty: Difficulty, mode: GameMode, minutes: Int) {
+        click()
+        dropFinishedMatch()
+        if (match != null) { notice = "Finish your live match first."; return }
+        online.createGathering(friendIds, difficulty, mode, minutes, onError = { notice = it }) { id ->
+            overlays = emptyList()
+            joinMatch(id, gathering = true)
+        }
+    }
+
+    fun respondToGathering(id: String, accept: Boolean) {
+        click()
+        dropFinishedMatch()
+        if (accept && match != null) { notice = "Finish your live match first."; return }
+        online.respondToGathering(id, accept, onJoin = { joinMatch(it, gathering = true) }) { notice = it }
+    }
+
+    /** Host: start the gathering with whoever's in the lobby. */
+    fun startGathering() {
+        click()
+        match?.go()
+    }
+
+    // ---- Co-op -------------------------------------------------------------------------------------------------------
+
+    /** A co-op move relayed by the server (ours or our partner's): both games apply the same moves in the same order. */
+    private fun applyCoopMove(mv: com.geoguy89.refinersfire.net.CoopMove) {
+        val e = engine ?: return
+        val mine = mv.by == online.account?.playerId
+        when (mv.kind) {
+            "play" -> {
+                val events = e.play(mv.index)
+                if (events.isEmpty()) DebugLog.add("co-op: move ${mv.seq} was illegal here (out of step?)") else handle(events, origin = mv.index)
+            }
+            "discard" -> {
+                if (mv.auto) fx.banner(if (mine) "Your turn ran out: the stone was melted" else "Their turn ran out", Palette.ember, height = 0.36f, y = ROWS - 1.7f, duration = 2.2f)
+                handle(e.discard(), origin = -1)
+            }
+            "miss" -> if (e.registerMiss()) {
+                forgeFlareAt = fx.now
+                fx.banner("Wrong guesses stoke the forge", Palette.lava, height = 0.42f, y = ROWS - 1.2f, duration = 2.0f)
+                if (e.state.gameOver) handle(listOf(GameEvent.GameOver), origin = -1) else { state = e.state; match?.report(e.state) }
+            } else state = e.state
+            "hint" -> {
+                val cells = e.useHint()
+                if (mine) {
+                    hintShown = true
+                    hintCells = cells.toSet()
+                    noMoves = cells.isEmpty()
+                    audio.play(Sfx.HINT)
+                } else fx.banner("Your partner used a hint", Palette.hint, height = 0.36f, y = ROWS - 1.7f, duration = 1.8f)
+                state = e.state
+                match?.report(e.state)
+            }
+        }
     }
 
     fun dismissNotice() { notice = null }
@@ -1262,12 +1356,14 @@ class GameViewModel(
 
     val totalUnread: Int get() = unread.values.sum()
 
-    private fun joinMatch(matchId: String) {
+    private fun joinMatch(matchId: String, gathering: Boolean = false) {
         val me = online.account ?: return
         if (match != null || !joinedMatches.add(matchId)) return
         persist() // Keep any single-player game safe; it resumes from the title afterwards.
         match = MatchSession(
             matchId, me.playerId, online, post, { fx.now },
+            initialGoal = if (gathering) MatchGoal("gathering", 5) else MatchGoal(),
+            onCoopMove = ::applyCoopMove,
             onStart = { seed, difficulty, mode, _ ->
                 adopt(GameEngine.newMatch(difficulty, seed, mode))
                 overlays = emptyList()

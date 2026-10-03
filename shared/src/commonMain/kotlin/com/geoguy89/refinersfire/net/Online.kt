@@ -83,6 +83,8 @@ data class Friend(
     /** Their chat public key, once their game has published one. */
     val publicKey: String? = null,
     val activityHidden: Boolean = false,
+    /** The best score you've made together in co-op. */
+    val coopBest: Long = 0,
 ) {
     val online: Boolean get() = lastSeenAgoMs != null && lastSeenAgoMs < 30_000
     val best: Long get() = scores.maxOfOrNull { it.score } ?: 0
@@ -100,7 +102,10 @@ enum class MatchType(val id: String, val title: String, val blurb: String, val v
     RACE("boards", "Race", "First to reach the target board wins. Overflow your forge and you lose.", listOf(1, 2, 3, 5), 2),
     SCORE("points", "Score Rush", "First to the target score wins. Overflow your forge and you lose.", listOf(1_000, 2_500, 5_000, 10_000), 2_500),
     SURVIVAL("survival", "Survival", "No clock and no target: the first forge to overflow loses. Careful play wins.", listOf(0), 0),
-    STOKE("stoke", "Stoke Duel", "Every line you clear stokes your rival's forge up a level (symbol lines stoke it twice). Highest score when time's up.", listOf(5, 8, 12), 8);
+    STOKE("stoke", "Stoke Duel", "Every line you clear stokes your rival's forge up a level (symbol lines stoke it twice). Highest score when time's up.", listOf(5, 8, 12), 8),
+    COOP("coop", "Co-op", "Take turns on one board with one shared forge, for as long as it lasts. Your best score together is kept.", listOf(0), 0),
+    /** 3-8 players at once; set up from the Friends screen rather than as a 1v1. */
+    GATHERING("gathering", "Gathering", "Everyone plays the same stones at once. Highest score when time's up.", listOf(5, 8, 12), 5);
 
     companion object {
         fun of(id: String) = entries.firstOrNull { it.id == id } ?: TIMED
@@ -113,7 +118,9 @@ data class MatchGoal(val type: String = "time", val value: Int = 8) {
     val kind: MatchType get() = MatchType.of(type)
     /** Races (boards, points) and Survival end when someone overflows; the others let the other player play on. */
     val race: Boolean get() = kind == MatchType.RACE || kind == MatchType.SCORE || kind == MatchType.SURVIVAL
-    val timed: Boolean get() = kind == MatchType.TIMED || kind == MatchType.STOKE
+    val timed: Boolean get() = kind == MatchType.TIMED || kind == MatchType.STOKE || kind == MatchType.GATHERING
+    val coop: Boolean get() = kind == MatchType.COOP
+    val gathering: Boolean get() = kind == MatchType.GATHERING
 
     fun label(difficulty: Difficulty): String = when (kind) {
         MatchType.TIMED -> "Timed · $value minutes"
@@ -121,6 +128,8 @@ data class MatchGoal(val type: String = "time", val value: Int = 8) {
         MatchType.SCORE -> "Score Rush · first to ${thousands(value.toLong() * difficulty.scoreMultiplier)}"
         MatchType.SURVIVAL -> "Survival · last forge standing"
         MatchType.STOKE -> "Stoke Duel · $value minutes"
+        MatchType.COOP -> "Co-op · one board, one forge"
+        MatchType.GATHERING -> "Gathering · $value minutes"
     }
 
     /** The setting as a short button label. */
@@ -128,7 +137,8 @@ data class MatchGoal(val type: String = "time", val value: Int = 8) {
         MatchType.TIMED, MatchType.STOKE -> "$value min"
         MatchType.RACE -> "Board ${difficulty.startBoard + value}"
         MatchType.SCORE -> thousands(value.toLong() * difficulty.scoreMultiplier)
-        MatchType.SURVIVAL -> ""
+        MatchType.SURVIVAL, MatchType.COOP -> ""
+        MatchType.GATHERING -> "$value min"
     }
 }
 
@@ -209,7 +219,27 @@ data class SyncResponse(
     val invites: List<Invite> = emptyList(),
     val messages: List<InboundMessage> = emptyList(),
     val asyncChallenges: List<AsyncChallenge> = emptyList(),
+    val gatherings: List<Gathering> = emptyList(),
 )
+
+@Serializable data class GatheringPlayer(val playerId: String, val name: String, val status: String = "invited")
+
+/** A gathering you host or were invited to: same stones for everyone, highest score when time's up. */
+@Serializable
+data class Gathering(
+    val id: String,
+    val hostId: String,
+    val hostName: String,
+    val difficulty: Difficulty = Difficulty.AVERAGE,
+    val mode: GameMode = GameMode.STRATEGIC,
+    val minutes: Int = 5,
+    val ageMs: Long = 0,
+    /** invited or joined. */
+    val myStatus: String = "invited",
+    val players: List<GatheringPlayer> = emptyList(),
+)
+@Serializable private data class GatheringBody(val playerIds: List<String>, val difficulty: Difficulty, val mode: GameMode, val minutes: Int)
+@Serializable private data class GatheringCreated(val id: String)
 
 @Serializable private data class RegisterBody(val name: String)
 @Serializable private data class ProfileBody(val name: String? = null, val publicKey: String? = null, val hideActivity: Boolean? = null, val pushToken: String? = null, val notifyManna: Boolean? = null)
@@ -290,6 +320,8 @@ class OnlineService(
     var global by mutableStateOf<List<ScoreDto>>(emptyList())
         private set
     var asyncChallenges by mutableStateOf<List<AsyncChallenge>>(emptyList())
+        private set
+    var gatherings by mutableStateOf<List<Gathering>>(emptyList())
         private set
     var leaderboard by mutableStateOf<List<LeaderboardEntry>>(emptyList())
         private set
@@ -372,6 +404,7 @@ class OnlineService(
                 outgoing = r.outgoing
                 invites = r.invites
                 asyncChallenges = r.asyncChallenges
+                gatherings = r.gatherings
                 account?.let { a ->
                     if (a.name != r.me.name || a.friendCode != r.me.friendCode) {
                         val updated = a.copy(name = r.me.name, friendCode = r.me.friendCode)
@@ -510,6 +543,24 @@ class OnlineService(
         send("POST", "/v1/match/respond", encode(RespondBody.serializer(), RespondBody(id, accept)), MatchAccepted.serializer(), onError = onError) { r ->
             r?.matchId?.let(onMatch)
         }
+    }
+
+    /** Invite [playerIds] (2-7 friends) to a gathering; [onCreated] gets its id (also the match id to join). */
+    fun createGathering(playerIds: List<String>, difficulty: Difficulty, mode: GameMode, minutes: Int, onError: (String) -> Unit, onCreated: (String) -> Unit) {
+        send("POST", "/v1/gathering/create", encode(GatheringBody.serializer(), GatheringBody(playerIds, difficulty, mode, minutes)), GatheringCreated.serializer(), onError = onError) { r ->
+            r?.id?.let(onCreated)
+            sync()
+        }
+    }
+
+    fun respondToGathering(id: String, accept: Boolean, onJoin: (String) -> Unit, onError: (String) -> Unit) {
+        gatherings = if (accept) gatherings.map { if (it.id == id) it.copy(myStatus = "joined") else it } else gatherings.filter { it.id != id }
+        send<Unit>("POST", "/v1/gathering/respond", encode(RespondBody.serializer(), RespondBody(id, accept)), null, onError = onError) { if (accept) onJoin(id) }
+    }
+
+    fun cancelGathering(id: String) {
+        gatherings = gatherings.filter { it.id != id }
+        send<Unit>("POST", "/v1/gathering/cancel", encode(IdBody.serializer(), IdBody(id)), null)
     }
 
     fun cancelInvite(id: String) {

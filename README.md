@@ -258,6 +258,7 @@ Open **Friends & 1v1** from the title screen.
   | **Race** | First to reach Board N |
   | **Score Rush** | First to the target score |
   | **Survival** | No clock: the first forge to overflow loses |
+  | **Co-op** | Not a contest: take turns on one shared board and forge and see how far you get together |
   | **Stoke Duel** | Timed. Every line you clear stokes your rival's forge up a level (a shape or perfect line stokes it twice). Stoked levels don't cool as you place stones: only clearing your own lines cools them, one level per line, and while your forge is stoked your clears can't stoke your rival back. Stoked levels glow blue in your forge, and being stoked past the top loses the match |
 
   If you lose connection, the game reconnects on its own; leave for too long and the match is forfeited. (Switching
@@ -269,6 +270,20 @@ Open **Friends & 1v1** from the title screen.
 * **Poke**: when a friend is offline, Poke sends a notification to their phone asking if they're up for a 1v1 (once
   every 10 minutes per friend).
 * **Removing a friend** asks you to confirm first, so it can't happen by accident.
+* **Co-op** (one of the match types when you challenge a friend): instead of competing, you take **turns** on **one
+  board** with **one shared forge**, for as long as it lasts. The bar at the top shows whose turn it is and how long is
+  left on it (30 seconds; if it runs out, that stone is melted so nobody's left waiting). Hints are allowed, but they
+  stoke the shared forge. Co-op doesn't count towards your wins and losses; instead your **best score together** is kept
+  and shown on your friend's card.
+* **Gatherings** (3 to 8 players): on the Friends screen, tap **Start a Gathering**, pick 2 to 7 friends, the difficulty,
+  the rules and the length (5, 8 or 12 minutes), and send the invites. They get a notification and a **Join** button;
+  everyone waits in the lobby until you tap **Start Now** (or it starts by itself once everyone's in). You all play the
+  same stones at the same time, with live standings at the top of the screen, and the highest score when time's up
+  wins. No hints in a Gathering.
+
+| Co-op | A Gathering | Gathering lobby |
+|---|---|---|
+| ![](docs/screenshots/coop.png) | ![](docs/screenshots/gathering.png) | ![](docs/screenshots/gathering_lobby.png) |
 * **Notifications**: when the game isn't open, your phone tells you about new messages ("New message from Sam"),
   challenges, pokes, friend requests and friends' daily Manna. The notification never includes what a message says.
   Turn them all off in **Options → Notifications**, or just the Manna ones in **Options → Friends' daily Manna**.

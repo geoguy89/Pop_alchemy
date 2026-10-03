@@ -41,6 +41,7 @@ class AchievementsTest {
         vm.startNewGame(Difficulty.EASY, GameMode.STRATEGIC)
         var t = 1L
         fun frame() { vm.onFrame(t); t += 50_000_000L }
+<<<<<<< Updated upstream
         
         // Place exactly 10 pieces to guarantee "stones-10" achievement
         repeat(10) {
@@ -57,6 +58,15 @@ class AchievementsTest {
                     break
                 }
             }
+=======
+        // Place pieces until "First Steps" (10 stones) unlocks.
+        var guard = 0
+        while ("stones-10" !in vm.unlocked && guard++ < 400) {
+            val s = vm.state ?: break
+            if (vm.overlay != null) { vm.continueAfterBoard(); frame(); continue }
+            val cell = vm.validCellsForTest().firstOrNull()
+            if (cell != null) vm.tapCell(cell) else vm.discard()
+>>>>>>> Stashed changes
             frame()
         }
         

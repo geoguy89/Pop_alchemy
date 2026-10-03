@@ -117,6 +117,9 @@ class GameViewModel(
     val overlay: Overlay? get() = overlays.lastOrNull()
 
     private var engine: GameEngine? = null
+
+    /** Test-only: the current piece's legal squares, without the wrong-guess forge penalty a probing tap would cost. */
+    internal fun validCellsForTest(): List<Int> = engine?.validCells() ?: emptyList()
     var state by mutableStateOf<GameState?>(null)
         private set
     var savedGame by mutableStateOf(store.loadGame())

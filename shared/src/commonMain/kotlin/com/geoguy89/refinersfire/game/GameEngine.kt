@@ -39,6 +39,13 @@ data class GameState(
     val forgeSources: List<ForgeSource> = emptyList(),
     /** A seeded piece order outside a match (Foresight, Manna), so the coming stones are known in advance. */
     val pieceSeed: Long? = null,
+    /** Manna: the day (local date number) this run belongs to. */
+    val mannaDay: Long? = null,
+    /** The score after each stone, recorded for runs others can race (Manna, challenges); null when not recording. */
+    val timeline: List<Long>? = null,
+    /** Someone else's [timeline] to race, and whose it is. */
+    val ghost: List<Long>? = null,
+    val ghostName: String? = null,
     val score: Long = 0,
     val streak: Int = 0,
     val bestStreak: Int = 0,
@@ -124,6 +131,8 @@ class GameEngine(state: GameState) {
         const val BOARD_POINTS = 500L
         const val DISCARD_PENALTY = 10L
         const val MAX_HINTS_PER_BOARD = 2
+        /** A recorded run never grows past this many stones (far beyond any real run). */
+        const val MAX_TIMELINE = 800
 
         fun newGame(difficulty: Difficulty, mode: GameMode, seed: Long = kotlin.random.Random.nextLong()): GameEngine {
             val board = difficulty.startBoard
@@ -410,7 +419,9 @@ class GameEngine(state: GameState) {
         return emptyList()
     }
 
-    private fun withNextPiece(s: GameState): GameState {
+    private fun withNextPiece(before: GameState): GameState {
+        // Each stone that's dealt with (placed or melted) adds the score so far to the run's record.
+        val s = if (before.timeline != null && before.timeline.size < MAX_TIMELINE) before.copy(timeline = before.timeline + before.score) else before
         val seed = s.seed ?: return s.copy(current = drawPiece(s), wrongTries = 0)
         // An empty board always gets the stone, without using up a piece of the shared sequence.
         if (s.boardEmpty) return s.copy(current = Piece.Cornerstone, wrongTries = 0)

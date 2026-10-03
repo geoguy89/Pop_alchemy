@@ -7,6 +7,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.geoguy89.refinersfire.audio.AudioPlayer
 import com.geoguy89.refinersfire.epochMillis
+import com.geoguy89.refinersfire.net.MannaSubmitBody
+import com.geoguy89.refinersfire.game.Manna
+import com.geoguy89.refinersfire.data.MannaResult
+import com.geoguy89.refinersfire.localDay
 import com.geoguy89.refinersfire.audio.Sfx
 import com.geoguy89.refinersfire.data.HighScore
 import com.geoguy89.refinersfire.data.Settings
@@ -84,6 +88,10 @@ sealed interface Overlay {
     data object Update : Overlay
     data object Peek : Overlay
     data class AsyncSetup(val rival: Rival) : Overlay
+    /** Today's Manna: the standings, and the way in. */
+    data object Manna : Overlay
+    /** A Manna run just ended. */
+    data class MannaDone(val result: MannaResult, val streak: Int) : Overlay
     /** A challenge run just ended: [sent] for the challenger, otherwise the outcome for the friend. */
     data class AsyncDone(val rival: String, val rivalId: String?, val score: Long, val theirScore: Long?, val sent: Boolean, val won: Boolean?) : Overlay
 }
@@ -127,6 +135,11 @@ class GameViewModel(
         private set
     /** An unfinished async challenge run, resumable from the title screen. */
     var savedChallenge by mutableStateOf(store.loadChallengeGame())
+        private set
+    /** Today's Manna in progress, and every day's result on this device. */
+    var savedManna by mutableStateOf(store.loadMannaGame())
+        private set
+    var mannaHistory by mutableStateOf(store.loadMannaHistory())
         private set
     private var announced = store.loadAnnounced()
     var highScores by mutableStateOf(store.loadHighScores())
@@ -267,6 +280,7 @@ class GameViewModel(
             receiveChat(r.messages)
             announceChallenges(r.asyncChallenges)
             retryPendingResults()
+            retryPendingManna()
             if (!scoresPushed) {
                 scoresPushed = true
                 online.pushScores(store.scoresForUpload(), settings.sharePlus)
@@ -477,9 +491,11 @@ class GameViewModel(
                 fx.boardComplete()
                 audio.play(Sfx.BOARD_CLEAR)
                 _haptics.tryEmit(Haptic.HEAVY)
-                // A challenge run ends when its boards are cleared.
-                if (ev.stats.challengeId != null && ev.stats.boardsCleared >= ev.stats.challengeBoards) finishChallengeRun(ev.stats)
-                else overlays = overlays + Overlay.BoardComplete(ev)
+                // A challenge or Manna run ends when its boards are cleared.
+                val run = ev.stats.challengeId != null || ev.stats.mannaDay != null
+                if (run && ev.stats.boardsCleared >= ev.stats.challengeBoards) {
+                    if (ev.stats.mannaDay != null) finishMannaRun(ev.stats) else finishChallengeRun(ev.stats)
+                } else overlays = overlays + Overlay.BoardComplete(ev)
             }
             is GameEvent.Discarded -> {
                 forgeFlareAt = fx.now
@@ -510,7 +526,8 @@ class GameViewModel(
             GameEvent.GameOver -> {
                 audio.play(Sfx.GAME_OVER)
                 // In a match you're out but the match goes on; the result comes from the server.
-                if (e.state.challengeId != null) finishChallengeRun(e.state)
+                if (e.state.mannaDay != null) finishMannaRun(e.state)
+                else if (e.state.challengeId != null) finishChallengeRun(e.state)
                 else if (match == null) overlays = overlays + Overlay.GameOver(e.state, store.qualifies(e.state.score, e.state.difficulty, e.state.mode))
             }
         }
@@ -684,6 +701,7 @@ class GameViewModel(
     private fun registerPush() {
         if (pushRegistered || !push.supported || online.account == null) return
         pushRegistered = true
+        online.setNotifyManna(settings.notifyManna)
         if (!settings.notifications) { online.setPushToken(""); return }
         push.register { token -> post { if (settings.notifications) online.setPushToken(token) } }
     }
@@ -781,7 +799,8 @@ class GameViewModel(
             resumeChallenge()
             return
         }
-        beginChallengeRun(c.id, c.seed, c.difficulty, c.boards, c.name)
+        // A friend's challenge comes with their run, to race as a ghost.
+        beginChallengeRun(c.id, c.seed, c.difficulty, c.boards, c.name, ghost = if (c.incoming) c.ghost else null)
     }
 
     fun declineChallenge(c: AsyncChallenge) {
@@ -789,10 +808,13 @@ class GameViewModel(
         online.declineAsync(c.id)
     }
 
-    private fun beginChallengeRun(id: String, seed: Long, difficulty: Difficulty, boards: Int, rival: String) {
+    private fun beginChallengeRun(id: String, seed: Long, difficulty: Difficulty, boards: Int, rival: String, ghost: List<Long>? = null) {
         persist() // Keep the single-player game safe.
         val e = GameEngine.newMatch(difficulty, seed)
-        adopt(GameEngine(e.state.copy(challengeId = id, challengeBoards = boards, challengeRival = rival)))
+        adopt(GameEngine(e.state.copy(
+            challengeId = id, challengeBoards = boards, challengeRival = rival,
+            timeline = emptyList(), ghost = ghost, ghostName = ghost?.let { rival },
+        )))
         overlays = emptyList()
         screen = Screen.GAME
         countGameStart()
@@ -810,7 +832,9 @@ class GameViewModel(
     /** The run is over (boards cleared or forge overflowed): send the result and show where things stand. */
     private fun finishChallengeRun(s: GameState) {
         val id = s.challengeId ?: return
-        val result = AsyncSubmitBody(id, s.score, s.boardsCleared.coerceAtMost(s.challengeBoards), s.elapsedMillis)
+        // Mark the run over, so the save at the end of this move clears its slot instead of writing it back.
+        engine = GameEngine(s.copy(gameOver = true))
+        val result = AsyncSubmitBody(id, s.score, s.boardsCleared.coerceAtMost(s.challengeBoards), s.elapsedMillis, s.timeline)
         store.saveChallengeGame(null)
         savedChallenge = null
         store.savePendingResults(store.loadPendingResults().filter { it.id != id } + result)
@@ -821,6 +845,76 @@ class GameViewModel(
         bump { it.copy(asyncPlayed = it.asyncPlayed + 1, asyncWon = it.asyncWon + if (won == true) 1 else 0) }
         overlays = listOf(Overlay.AsyncDone(rival, c?.playerId, s.score, target, sent = c?.incoming != true, won = won))
         retryPendingResults()
+    }
+
+    private fun retryPendingManna() {
+        for (r in store.loadPendingManna()) online.submitManna(r) { delivered ->
+            if (delivered) {
+                store.savePendingManna(store.loadPendingManna().filter { it.day != r.day })
+                if (r.day == today) online.fetchManna(r.day)
+            }
+        }
+    }
+
+    // ---- Manna -------------------------------------------------------------------------------------------------------
+
+    /** Today's local date, as a day number. */
+    val today: Long get() = localDay(epochMillis())
+
+    /** Today's Manna, if this device has gathered it. */
+    val todaysManna: MannaResult? get() = mannaHistory.firstOrNull { it.day == today }
+
+    /** Days in a row gathered, up to today. */
+    val mannaStreak: Int get() = Manna.streak(mannaHistory.map { it.day }.toSet(), today)
+
+    fun openManna() {
+        click()
+        overlays = overlays + Overlay.Manna
+        online.ensureAccount(settings.playerName) { online.fetchManna(today); retryPendingManna() }
+    }
+
+    /** Begin (or carry on with) today's Manna. One run a day: once it's gathered, there's no second try. */
+    fun playManna() {
+        click()
+        dropFinishedMatch()
+        if (match != null) { notice = "Finish your live match first."; return }
+        if (todaysManna != null) { notice = "You've gathered today's Manna. Come back tomorrow for more."; return }
+        val saved = store.loadMannaGame()
+        persist() // Keep the single-player game safe.
+        if (saved != null && saved.mannaDay == today) {
+            adopt(GameEngine(saved))
+        } else {
+            // A friend who has already played today lends their run as a ghost to race.
+            val board = online.manna?.takeIf { it.day == today }
+            adopt(Manna.newRun(today, board?.ghost?.timeline, board?.ghost?.name))
+            countGameStart()
+        }
+        overlays = emptyList()
+        screen = Screen.GAME
+        persist()
+    }
+
+    /** The run is over (three boards or the forge overflowed): keep it, send it, and show the day's standings. */
+    private fun finishMannaRun(s: GameState) {
+        val day = s.mannaDay ?: return
+        // Mark the run over, so the save at the end of this move clears its slot instead of writing it back.
+        engine = GameEngine(s.copy(gameOver = true))
+        val result = MannaResult(day, s.score, s.boardsCleared.coerceAtMost(s.challengeBoards))
+        store.addMannaResult(result)
+        mannaHistory = store.loadMannaHistory()
+        store.saveMannaGame(null)
+        savedManna = null
+        val streak = Manna.streak(mannaHistory.map { it.day }.toSet(), today)
+        bump { it.copy(mannaDays = mannaHistory.size, bestMannaStreak = maxOf(it.bestMannaStreak, streak)) }
+        store.savePendingManna(store.loadPendingManna().filter { it.day != day } + MannaSubmitBody(day, s.score, result.boards, s.elapsedMillis, s.timeline))
+        overlays = listOf(Overlay.MannaDone(result, streak))
+        online.ensureAccount(settings.playerName) { retryPendingManna() }
+    }
+
+    fun setNotifyManna(on: Boolean) {
+        click()
+        updateSettings(settings.copy(notifyManna = on))
+        online.setNotifyManna(on)
     }
 
     private fun retryPendingResults() {
@@ -934,6 +1028,8 @@ class GameViewModel(
                         boardsCleared = s.boardsCleared + 1,
                         cleanBoards = s.cleanBoards + if (clean) 1 else 0,
                         timeTrialBoards = s.timeTrialBoards + if (g.mode == GameMode.TIME_TRIAL) 1 else 0,
+                        ironBoards = s.ironBoards + if (g.mode == GameMode.IRON_FORGE) 1 else 0,
+                        foresightBoards = s.foresightBoards + if (g.mode == GameMode.FORESIGHT) 1 else 0,
                         difficultiesCleared = s.difficultiesCleared + d,
                         bestBoardsInGame = s.bestBoardsInGame + (d to maxOf(s.bestBoardsInGame[d] ?: 0, g.boardsCleared)),
                         fastestBoardMs = if (boardMs > 0 && (s.fastestBoardMs == 0L || boardMs < s.fastestBoardMs)) boardMs else s.fastestBoardMs,
@@ -1325,6 +1421,11 @@ class GameViewModel(
 
     private fun persist() {
         val s = engine?.state ?: return
+        if (s.mannaDay != null) {
+            store.saveMannaGame(if (s.gameOver) null else s)
+            savedManna = store.loadMannaGame()
+            return
+        }
         if (s.challengeId != null) {
             store.saveChallengeGame(if (s.gameOver) null else s)
             savedChallenge = store.loadChallengeGame()

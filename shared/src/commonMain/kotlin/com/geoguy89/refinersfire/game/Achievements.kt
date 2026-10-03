@@ -46,6 +46,10 @@ data class LifetimeStats(
     val sharedGlobally: Boolean = false,
     val asyncPlayed: Int = 0,
     val asyncWon: Int = 0,
+    val mannaDays: Int = 0,
+    val bestMannaStreak: Int = 0,
+    val ironBoards: Int = 0,
+    val foresightBoards: Int = 0,
 )
 
 enum class AchievementCategory(val title: String) {
@@ -133,6 +137,8 @@ object Achievements {
             { "Score $it points on a single board" }) { it.bestBoardPoints }
         one("no-hint", "Unaided", "Reach board 5 in a game without using a hint", M) { it.noHintGameBoards >= 4 }
         one("no-hint-10", "Walk by Faith", "Reach board 10 in a game without using a hint", M) { it.noHintGameBoards >= 9 }
+        tiers("iron", M, listOf(1, 10), listOf("Iron Will", "Tempered Steel"), { "Complete $it boards in Iron Forge" }) { it.ironBoards.toLong() }
+        one("foresight-board", "Eyes to See", "Complete a board in Foresight", M) { it.foresightBoards > 0 }
 
         val R = AchievementCategory.RANKS
         Ranks.table.drop(1).forEach { (score, rank) ->
@@ -166,6 +172,10 @@ object Achievements {
         one("theme-temple", "Into the Temple", "Play a game in the Temple theme", H) { "TEMPLE" in it.themesPlayed }
         one("theme-future", "Back to the Future", "Play a game in the Future theme", H) { "FUTURE" in it.themesPlayed }
         one("theme-all", "Well Travelled", "Play a game in every theme", H) { it.themesPlayed.size >= 3 }
+        tiers("manna", H, listOf(1, 7, 30, 100), listOf("Morning Dew", "Daily Bread", "Bread from Heaven", "Hidden Manna"),
+            { "Gather the daily Manna on $it days" }) { it.mannaDays.toLong() }
+        tiers("manna-streak", H, listOf(7, 30), listOf("Seven Mornings", "Thirty Mornings"),
+            { "Gather the daily Manna $it days in a row" }) { it.bestMannaStreak.toLong() }
         tiers("nearby", H, listOf(1, 5, 10), listOf("Good Neighbour", "Block Party", "Love Thy Neighbour"),
             { "Swap scores with $it nearby devices" }) { it.nearbyDevices.toLong() }
 

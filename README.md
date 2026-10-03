@@ -88,6 +88,21 @@ Version**. You can also check any time in **Options → Check Now**.
 
 **How to Play** on the title screen walks through the rules with pictures.
 
+### Today's Manna (the daily challenge)
+
+Once a day, everyone in the world gets **the same run**: Average difficulty, three boards, the same stones in the same
+order. Like the manna in the wilderness, it's fresh each morning and gone by the next.
+
+1. Tap **Today's Manna** on the title screen to see today's standings, then **Gather Today's Manna**.
+2. You get **one try** a day. You can leave and come back (**Continue Today's Manna**), but once it's finished, that's
+   your score for the day.
+3. If a friend has already played today, you race their run as you go: the top of the screen shows where they were
+   after the same number of stones, and whether you're ahead or behind.
+4. Afterwards you'll see where you placed among your friends and everyone who played today. Come back each day to build
+   a **streak** (the title screen keeps count).
+5. When a friend gathers the day's Manna before you, your phone gets a nudge ("Sam gathered today's Manna: 4,250. Can
+   you beat it?"). Turn these off in **Options → Friends' daily Manna**.
+
 ### Playing with a friend
 
 1. Tap **Friends & 1v1** on the title screen, then **Copy Code** and send your friend code (for example
@@ -234,14 +249,14 @@ Open **Friends & 1v1** from the title screen.
   away during a live match doesn't send you to the title screen; come straight back to keep playing.)
 * **Challenges** (no need to be online together): pick a friend, a difficulty and 1, 3 or 5 boards, and play your
   run. They're told "beat 4,250" next time they open the game, and play the exact same run whenever they like within
-  a week. The higher score wins.
+  a week, racing your run as they go (where you were after the same number of stones). The higher score wins.
 * **Chat** with any friend, in or out of a match. Only the two of you can read it.
 * **Poke**: when a friend is offline, Poke sends a notification to their phone asking if they're up for a 1v1 (once
   every 10 minutes per friend).
 * **Removing a friend** asks you to confirm first, so it can't happen by accident.
 * **Notifications**: when the game isn't open, your phone tells you about new messages ("New message from Sam"),
-  challenges and friend requests. The notification never includes what the message says. Turn them off in
-  **Options → Notifications**.
+  challenges, pokes, friend requests and friends' daily Manna. The notification never includes what a message says.
+  Turn them all off in **Options → Notifications**, or just the Manna ones in **Options → Friends' daily Manna**.
 
 ## Sharing and privacy
 

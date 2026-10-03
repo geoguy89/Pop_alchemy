@@ -199,4 +199,9 @@ private fun ModeLabel(state: GameState) {
         "Challenge vs ${state.challengeRival ?: "friend"} · board ${state.boardsCleared + 1} of ${state.challengeBoards}",
         style = bodyStyle(12.sp, Palette.hint, bold = true),
     )
+    if (state.mannaDay != null) Text(
+        "Today's Manna · board ${state.boardsCleared + 1} of ${state.challengeBoards}",
+        style = bodyStyle(12.sp, Palette.hint, bold = true),
+    )
+    GhostLine(state)
 }

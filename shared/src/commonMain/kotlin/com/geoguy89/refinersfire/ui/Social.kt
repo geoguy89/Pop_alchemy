@@ -63,7 +63,7 @@ private fun fieldColors() = OutlinedTextFieldDefaults.colors(
 )
 
 @Composable
-private fun SectionTitle(text: String) =
+internal fun SectionTitle(text: String) =
     Text(text, style = bodyStyle(15.sp, Palette.goldLight, bold = true), modifier = Modifier.fillMaxWidth())
 
 internal fun dim() = Palette.parchment.copy(alpha = 0.7f)

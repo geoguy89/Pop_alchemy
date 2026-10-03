@@ -12,3 +12,9 @@ expect fun epochMillis(): Long
 
 /** A short, locale-appropriate date. */
 expect fun formatDate(epochMillis: Long): String
+
+/** The player's local date as a day number (days since 1 January 1970). */
+expect fun localDay(epochMillis: Long): Long
+
+/** A day number as a long date, e.g. "Saturday, October 3". */
+expect fun formatDay(day: Long): String

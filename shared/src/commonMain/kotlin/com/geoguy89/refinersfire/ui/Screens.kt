@@ -99,6 +99,18 @@ fun TitleScreen(vm: GameViewModel) {
                 BrassButton("Continue · Board ${saved.board}", vm::resumeSavedGame, buttons, fontSize = 18.sp)
             }
             BrassButton("New Game", { vm.push(Overlay.NewGame) }, buttons, fontSize = 18.sp)
+            // Today's Manna: golden until it's gathered, then a quiet record of the day's score and the streak.
+            val manna = vm.todaysManna
+            val streak = vm.mannaStreak
+            BrassButton(
+                when {
+                    manna != null -> "Today's Manna: ${manna.score}" + if (streak > 1) " · $streak days" else ""
+                    vm.savedManna?.mannaDay == vm.today -> "Continue Today's Manna"
+                    streak > 0 -> "Today's Manna · keep your $streak-day streak"
+                    else -> "Today's Manna"
+                },
+                vm::openManna, buttons, dark = manna != null, fontSize = 16.sp,
+            )
             BrassButton("How to Play", { vm.push(Overlay.HowToPlay) }, buttons, dark = true)
             BrassButton("Hall of Fame", { vm.openHallOfFame() }, buttons, dark = true)
             val social = vm.online.incoming.size + vm.totalUnread + vm.ourMoves.size
@@ -171,6 +183,8 @@ fun OverlayHost(vm: GameViewModel) {
         is Overlay.AsyncSetup -> AsyncSetupPanel(vm, o.rival)
         is Overlay.AsyncDone -> AsyncDonePanel(vm, o)
         Overlay.Achievements -> AchievementsPanel(vm)
+        Overlay.Manna -> MannaPanel(vm)
+        is Overlay.MannaDone -> MannaDonePanel(vm, o)
     }
 }
 
@@ -226,9 +240,16 @@ private fun OptionsPanel(vm: GameViewModel) {
         if (vm.push.supported) {
             OptionSwitch("Notifications", s.notifications, switchColors) { vm.setNotifications(it) }
             Text(
-                "Chats, challenges and friend requests when the game isn't open on screen.",
+                "Chats, challenges, pokes and friend requests when the game isn't open on screen.",
                 style = bodyStyle(12.sp, Palette.parchment.copy(alpha = 0.7f)), textAlign = TextAlign.Center,
             )
+            if (s.notifications) {
+                OptionSwitch("Friends' daily Manna", s.notifyManna, switchColors) { vm.setNotifyManna(it) }
+                Text(
+                    "A nudge when a friend gathers the day's Manna and you haven't yet.",
+                    style = bodyStyle(12.sp, Palette.parchment.copy(alpha = 0.7f)), textAlign = TextAlign.Center,
+                )
+            }
         }
         if (vm.updater.supported) {
             OptionSwitch("Check for updates", s.checkUpdates, switchColors) { vm.click(); vm.updateSettings(s.copy(checkUpdates = it)) }

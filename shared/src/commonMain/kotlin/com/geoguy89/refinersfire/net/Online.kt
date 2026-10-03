@@ -188,6 +188,8 @@ data class AsyncChallenge(
     val myBoards: Int? = null,
     val theirBoards: Int? = null,
     val winner: String? = null,
+    /** The challenger's run, score by score, to race as a ghost (only while it's our move). */
+    val ghost: List<Long>? = null,
 ) {
     /** It's our move: a friend's challenge waiting for our run. */
     val ourMove: Boolean get() = incoming && status == "waiting"
@@ -210,7 +212,7 @@ data class SyncResponse(
 )
 
 @Serializable private data class RegisterBody(val name: String)
-@Serializable private data class ProfileBody(val name: String? = null, val publicKey: String? = null, val hideActivity: Boolean? = null, val pushToken: String? = null)
+@Serializable private data class ProfileBody(val name: String? = null, val publicKey: String? = null, val hideActivity: Boolean? = null, val pushToken: String? = null, val notifyManna: Boolean? = null)
 @Serializable private data class LeaderboardResponse(val players: List<LeaderboardEntry>, val me: LeaderboardStanding? = null)
 
 /** Where the player stands on a leaderboard: their rank among [total] players, with their [best] score. */
@@ -225,7 +227,27 @@ data class BoardResult(val players: List<LeaderboardEntry>, val me: LeaderboardS
 @Serializable private data class ChatBody(val to: String, val nonce: String, val ct: String)
 @Serializable private data class AsyncCreateBody(val playerId: String, val difficulty: Difficulty, val boards: Int)
 @Serializable data class AsyncCreated(val id: String, val seed: Long, val difficulty: Difficulty, val boards: Int)
-@Serializable data class AsyncSubmitBody(val id: String, val score: Long, val boards: Int, val timeMs: Long)
+@Serializable data class AsyncSubmitBody(val id: String, val score: Long, val boards: Int, val timeMs: Long, val timeline: List<Long>? = null)
+
+/** A finished Manna run, sent once (the server keeps the first of each day). */
+@Serializable data class MannaSubmitBody(val day: Long, val score: Long, val boards: Int, val timeMs: Long, val timeline: List<Long>? = null)
+
+@Serializable data class MannaEntry(val playerId: String, val name: String, val score: Long, val boards: Int = 0)
+@Serializable data class MannaMine(val score: Long, val boards: Int = 0)
+@Serializable data class MannaGhost(val name: String, val timeline: List<Long>)
+
+/** One day's Manna: your result and rank, friends' results, the Global top, and a friend's run to race. */
+@Serializable
+data class MannaBoard(
+    val day: Long,
+    val mine: MannaMine? = null,
+    val rank: Int? = null,
+    val total: Int = 0,
+    val friends: List<MannaEntry> = emptyList(),
+    val top: List<MannaEntry> = emptyList(),
+    val ghost: MannaGhost? = null,
+)
+@Serializable private data class MannaSubmitted(val ok: Boolean = true, val rank: Int? = null, val total: Int = 0)
 @Serializable private data class AsyncSubmitted(val status: String, val winner: String? = null)
 @Serializable private data class ScoresBody(val scores: List<ScoreDto>, val shareGlobal: Boolean)
 @Serializable private data class CodeBody(val code: String)
@@ -270,6 +292,9 @@ class OnlineService(
     var asyncChallenges by mutableStateOf<List<AsyncChallenge>>(emptyList())
         private set
     var leaderboard by mutableStateOf<List<LeaderboardEntry>>(emptyList())
+        private set
+    /** The latest Manna standings fetched (for the day asked). */
+    var manna by mutableStateOf<MannaBoard?>(null)
         private set
     /** Slices of the Global board fetched so far (by difficulty, mode and period). */
     var boards by mutableStateOf<Map<BoardKey, BoardResult>>(emptyMap())
@@ -369,6 +394,28 @@ class OnlineService(
 
     fun setHideActivity(hide: Boolean) {
         send<Unit>("POST", "/v1/profile", encode(ProfileBody.serializer(), ProfileBody(hideActivity = hide)), null)
+    }
+
+    fun fetchManna(day: Long, done: (MannaBoard?) -> Unit = {}) {
+        if (account == null) { done(null); return }
+        send("GET", "/v1/manna?day=$day", null, MannaBoard.serializer(), onError = { done(null) }) { r ->
+            if (r != null) manna = r
+            done(r)
+        }
+    }
+
+    /** [done] true once the server has it (or already had one for that day, which is just as final). */
+    fun submitManna(result: MannaSubmitBody, done: (Boolean) -> Unit) {
+        if (account == null) { done(false); return }
+        send("POST", "/v1/manna/submit", encode(MannaSubmitBody.serializer(), result), MannaSubmitted.serializer(), onError = { err ->
+            done(!err.startsWith("Can't reach"))
+        }) { done(true) }
+    }
+
+    /** Whether friends finishing the day's Manna should send this player a notification. */
+    fun setNotifyManna(on: Boolean) {
+        if (account == null) return
+        send<Unit>("POST", "/v1/profile", encode(ProfileBody.serializer(), ProfileBody(notifyManna = on)), null)
     }
 
     /** The device token for notifications, or "" to stop them. */

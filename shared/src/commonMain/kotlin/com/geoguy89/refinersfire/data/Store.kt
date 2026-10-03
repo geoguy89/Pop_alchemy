@@ -3,6 +3,7 @@ package com.geoguy89.refinersfire.data
 import com.geoguy89.refinersfire.ThemeId
 import com.geoguy89.refinersfire.net.Account
 import com.geoguy89.refinersfire.net.AsyncSubmitBody
+import com.geoguy89.refinersfire.net.MannaSubmitBody
 import com.geoguy89.refinersfire.net.ChatKeyPair
 import com.geoguy89.refinersfire.net.ChatLine
 import com.geoguy89.refinersfire.net.Friend
@@ -29,6 +30,8 @@ data class Settings(
     val hideActivity: Boolean = false,
     /** Notifications for chats, challenges and friend requests when the game isn't on screen. */
     val notifications: Boolean = true,
+    /** A notification when a friend gathers the day's Manna (only with [notifications] on). */
+    val notifyManna: Boolean = true,
     /** Piece shapes from another theme; null matches the theme. */
     val pieceSet: ThemeId? = null,
     val playerName: String = "Refiner",
@@ -52,6 +55,10 @@ data class HighScore(
     val mode: GameMode,
     val epochMillis: Long,
 )
+
+/** One day's Manna, as this device gathered it. */
+@Serializable
+data class MannaResult(val day: Long, val score: Long, val boards: Int)
 
 /**
  * High scores from another device: met directly on the local network ([direct]), or passed on by a Local+ player.
@@ -193,6 +200,21 @@ class Store(private val prefs: KeyValueStore) {
     /** An async challenge run in progress, kept apart from the single-player save. */
     fun loadChallengeGame(): GameState? = decode("challengeGame", GameState.serializer())
     fun saveChallengeGame(s: GameState?) = prefs.put("challengeGame", s?.let { json.encodeToString(GameState.serializer(), it) })
+
+    /** Today's Manna in progress (kept apart from the single-player save). */
+    fun loadMannaGame(): GameState? = decode("mannaGame", GameState.serializer())
+    fun saveMannaGame(s: GameState?) = prefs.put("mannaGame", s?.let { json.encodeToString(GameState.serializer(), it) })
+
+    /** Every day's Manna this device gathered (for streaks and the title screen). */
+    fun loadMannaHistory(): List<MannaResult> = decode("mannaHistory", ListSerializer(MannaResult.serializer())) ?: emptyList()
+    fun addMannaResult(r: MannaResult) {
+        val list = (loadMannaHistory().filter { it.day != r.day } + r).sortedBy { it.day }.takeLast(400)
+        prefs.put("mannaHistory", json.encodeToString(ListSerializer(MannaResult.serializer()), list))
+    }
+
+    /** Manna results not yet confirmed by the server. */
+    fun loadPendingManna(): List<MannaSubmitBody> = decode("pendingManna", ListSerializer(MannaSubmitBody.serializer())) ?: emptyList()
+    fun savePendingManna(l: List<MannaSubmitBody>) = prefs.put("pendingManna", json.encodeToString(ListSerializer(MannaSubmitBody.serializer()), l))
 
     /** Finished runs whose result hasn't reached the server yet. */
     fun loadPendingResults(): List<AsyncSubmitBody> = decode("pendingResults", ListSerializer(AsyncSubmitBody.serializer())) ?: emptyList()

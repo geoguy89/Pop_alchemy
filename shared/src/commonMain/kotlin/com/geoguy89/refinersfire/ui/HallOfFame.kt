@@ -71,7 +71,9 @@ fun HallOfFamePanel(vm: GameViewModel) {
     }
     GamePanel("Hall of Fame", vm::pop, maxWidth = 660.dp) {
         YourBests(vm, expanded = showBests) { vm.click(); showBests = !showBests }
-        Chips(HallTab.entries, tab, { it.label }) { vm.click(); tab = it }
+        // The web version can't reach other devices on the Wi-Fi, so it has no Nearby list.
+        val tabs = if (com.geoguy89.refinersfire.isWeb) HallTab.entries - HallTab.NEARBY else HallTab.entries
+        Chips(tabs, tab, { it.label }) { vm.click(); tab = it }
         Chips(listOf<Difficulty?>(null) + Difficulty.entries, difficulty, { it?.displayName ?: "All Levels" }) { vm.click(); difficulty = it }
         // Five modes don't fit one row on a phone: three, then two.
         for (row in (listOf<GameMode?>(null) + GameMode.entries).chunked(3)) {

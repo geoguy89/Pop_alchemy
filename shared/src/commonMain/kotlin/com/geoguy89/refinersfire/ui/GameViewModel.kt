@@ -409,7 +409,7 @@ class GameViewModel(
                 fx.invalid(index)
                 audio.play(Sfx.INVALID)
                 _haptics.tryEmit(Haptic.REJECT)
-                m.sendMove("miss")
+                if (isGuess(e.state, index)) m.sendMove("miss")
             }
             return
         }
@@ -419,7 +419,8 @@ class GameViewModel(
             audio.play(Sfx.INVALID)
             _haptics.tryEmit(Haptic.REJECT)
             // Probing squares by hand instead of using a hint isn't free: every second wrong try stokes the forge.
-            if (e.registerMiss()) {
+            // Tapping a square that's already taken is just a slip, so it never counts.
+            if (isGuess(e.state, index) && e.registerMiss()) {
                 state = e.state
                 forgeFlareAt = fx.now
                 if (e.state.gameOver) {
@@ -434,6 +435,12 @@ class GameViewModel(
         }
         handle(events, origin = index)
     }
+
+    /**
+     * Whether a refused tap was a guess at where the stone might go: an empty square tapped with a stone in hand. A tap on
+     * a square that's already filled (or with the Hammer, which only ever needs a stone to strike) is an accident.
+     */
+    private fun isGuess(s: GameState, index: Int): Boolean = s.current !is Piece.Hammer && s.cells.getOrNull(index) == null
 
     fun discard() {
         val e = engine ?: return

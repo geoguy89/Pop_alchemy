@@ -16,6 +16,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.exclude
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -66,7 +71,8 @@ import kotlin.math.sin
 
 /** The game's typefaces, per theme. Loaded once by [ProvideFonts]; the serif fallback covers the first frame. */
 object Fonts {
-    private var families: Map<ThemeId, Pair<FontFamily, FontFamily>> = emptyMap()
+    // Snapshot state: on the web the fonts arrive a moment after the first frame, and text must redraw when they do.
+    private var families by androidx.compose.runtime.mutableStateOf<Map<ThemeId, Pair<FontFamily, FontFamily>>>(emptyMap())
 
     val title: FontFamily get() = families[Palette.theme]?.first ?: FontFamily.Serif
     val body: FontFamily get() = families[Palette.theme]?.second ?: FontFamily.Serif
@@ -74,7 +80,7 @@ object Fonts {
     @Composable
     fun ProvideFonts(content: @Composable () -> Unit) {
         val font = @Composable { r: org.jetbrains.compose.resources.FontResource, w: FontWeight -> org.jetbrains.compose.resources.Font(r, w) }
-        families = mapOf(
+        val loaded = mapOf(
             ThemeId.MODERN to (
                 FontFamily(font(Res.font.cinzeldecorative_bold, FontWeight.Bold), font(Res.font.cinzeldecorative_regular, FontWeight.Normal)) to
                     FontFamily(font(Res.font.cinzel, FontWeight.Normal), font(Res.font.cinzel, FontWeight.Bold))
@@ -96,6 +102,10 @@ object Fonts {
                     FontFamily(font(Res.font.marcellus, FontWeight.Normal), font(Res.font.marcellus, FontWeight.Bold))
                 ),
         )
+        // First draw: use them straight away (no fallback flash). Later, when a font finishes loading (the web), update
+        // after composition so every text redraws in its proper lettering.
+        if (families.isEmpty()) families = loaded
+        androidx.compose.runtime.SideEffect { if (families != loaded) families = loaded }
         content()
     }
 }
@@ -238,7 +248,10 @@ fun GamePanel(
             .fillMaxSize()
             .background(Color.Black.copy(alpha = 0.62f))
             .clickable(remember { MutableInteractionSource() }, indication = null) { onDismiss?.invoke() }
-            .safeDrawingPadding()
+            // On the web a panel doesn't move for the on-screen keyboard: if it did, the first tap on a button after typing
+            // would land on a button that moves out from under it (the keyboard closes as the tap starts). The
+            // keyboard's own Done/Send key submits instead.
+            .windowInsetsPadding(if (com.geoguy89.refinersfire.isWeb) WindowInsets.safeDrawing.exclude(WindowInsets.ime) else WindowInsets.safeDrawing)
             .padding(16.dp),
         contentAlignment = Alignment.Center,
     ) {

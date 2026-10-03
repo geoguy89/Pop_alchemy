@@ -10,7 +10,7 @@ permissions:
   contents: write
 
 env:
-  VERSION: 2.5.0
+  VERSION: 2.6.0
 
 jobs:
   android:
@@ -87,6 +87,47 @@ jobs:
             RefinersFire-*-windows-setup.msi
             RefinersFire-*-windows-portable.zip
 
+  web:
+    name: Build web version (iPhone, iPad, browsers)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+      - name: Build
+        run: ./gradlew :shared:wasmJsBrowserDistribution
+      - name: Stamp version
+        run: |
+          cd shared/build/dist/wasmJs/productionExecutable
+          sed -i "s|name=\"rf-version\" content=\"dev\"|name=\"rf-version\" content=\"${VERSION}\"|" index.html
+          sed -i "s|name=\"rf-build\" content=\"0\"|name=\"rf-build\" content=\"${{ github.run_number }}\"|" index.html
+          sed -i "s|'refinersfire-v1'|'refinersfire-${VERSION}-${{ github.run_number }}'|" sw.js
+          grep -q "content=\"${VERSION}\"" index.html
+          grep -q "refinersfire-${VERSION}-" sw.js
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: shared/build/dist/wasmJs/productionExecutable
+
+  web-deploy:
+    name: Publish web version
+    needs: web
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4
+
   release:
     name: Publish GitHub Release
     needs: [android, windows]
@@ -110,6 +151,9 @@ jobs:
             **Windows 10/11**:
             - `RefinersFire-${{ env.VERSION }}-windows-setup.msi`: installer with Start-menu and desktop shortcuts.
             - `RefinersFire-${{ env.VERSION }}-windows-portable.zip`: no install; unzip anywhere and run `Refiners Fire\Refiners Fire.exe`.
+
+            **iPhone & iPad**: open https://geoguy89.github.io/refiners-fire/ in Safari, tap Share, then *Add to Home Screen*
+            (iOS 18.2 or newer). It updates by itself.
 
             The builds are not code-signed, so Windows SmartScreen may warn: choose *More info → Run anyway*.
           files: dist/*

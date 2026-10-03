@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Refiner's Fire">
+  <meta name="application-name" content="Refiner's Fire">
+  <meta name="theme-color" content="#140E0A">
+  <meta name="description" content="A Scripture-themed tile-matching puzzle: refine the board from lead to gold.">
+  <meta name="rf-version" content="dev">
+  <meta name="rf-build" content="0">
+  <title>Refiner's Fire</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="icon" type="image/png" href="icons/icon-192.png">
+  <style>
+    html, body {
+      margin: 0; height: 100%; background: #140E0A; overflow: hidden; overscroll-behavior: none;
+      -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent;
+    }
+    /* Keep the game clear of the notch, the rounded corners and the home bar. */
+    #app {
+      position: fixed;
+      top: env(safe-area-inset-top, 0); bottom: env(safe-area-inset-bottom, 0);
+      left: env(safe-area-inset-left, 0); right: env(safe-area-inset-right, 0);
+      touch-action: none;
+    }
+    #splash, #unsupported {
+      position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      background: radial-gradient(circle at 50% 40%, #3b2616, #140e0a 70%); color: #f1e4c0;
+      font-family: Georgia, 'Times New Roman', serif; text-align: center; padding: 24px; box-sizing: border-box;
+      transition: opacity 0.35s ease;
+    }
+    #splash img { width: 96px; height: 96px; border-radius: 22px; margin-bottom: 18px; }
+    #splash h1, #unsupported h1 { font-size: 30px; letter-spacing: 1px; margin: 0 0 10px; color: #fff3b0; }
+    #splash p, #unsupported p { margin: 4px 0; opacity: 0.8; max-width: 420px; line-height: 1.4; }
+    #unsupported { display: none; }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+  <div id="splash">
+    <img src="icons/icon-192.png" alt="">
+    <h1>Refiner's Fire</h1>
+    <p id="splash-note">Lighting the forge...</p>
+  </div>
+  <div id="unsupported">
+    <h1>Refiner's Fire</h1>
+    <p>This device's browser is too old to run the game.</p>
+    <p>On an iPhone or iPad, update to iOS 18.2 or newer (Settings &gt; General &gt; Software Update), then open this page in Safari again.</p>
+  </div>
+  <script>
+    // The game is Kotlin compiled to WebAssembly with garbage collection (Safari 18.2+, Chrome 119+, Firefox 120+).
+    var wasmGc = (function () {
+      try {
+        return typeof WebAssembly === 'object' && WebAssembly.validate(new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0, 1, 5, 1, 95, 1, 127, 0]));
+      } catch (e) { return false; }
+    })();
+    if (!wasmGc) {
+      document.getElementById('splash').style.display = 'none';
+      document.getElementById('unsupported').style.display = 'flex';
+    } else {
+      var s = document.createElement('script');
+      s.src = 'refinersfire.js';
+      s.onerror = function () { document.getElementById('splash-note').textContent = "Couldn't load the game. Check your connection and try again."; };
+      document.body.appendChild(s);
+    }
+    // Works offline once it's been opened, and picks up new versions by itself.
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });
+    }
+  </script>
+</body>
+</html>

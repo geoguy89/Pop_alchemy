@@ -63,6 +63,22 @@ class ModesTest {
     }
 
     @Test
+    fun tappingAFilledSquareIsNeverCountedAsAGuess() {
+        val vm = com.geoguy89.refinersfire.ui.GameViewModel(
+            Store(MemoryKeyValueStore()).also { it.saveSettings(com.geoguy89.refinersfire.data.Settings(playerName = "Alex", nameChosen = true)) },
+            com.geoguy89.refinersfire.audio.SilentAudio,
+        )
+        vm.loadForPreview(engine(GameMode.STRATEGIC, current = Piece.Stone(Glyph.LAPIS, StoneColor.BLUE)).state)
+        val filled = index(3, 3)
+        repeat(6) { vm.tapCell(filled) }
+        assertEquals("taps on a taken square cost nothing", 0, vm.state!!.forge)
+        assertEquals(0, vm.state!!.wrongTries)
+        // An empty square the stone can't use is a guess: the second one stokes the forge.
+        vm.tapCell(index(0, 0)); vm.tapCell(index(0, 0))
+        assertEquals(1, vm.state!!.forge)
+    }
+
+    @Test
     fun otherModesShowNothingComing() {
         assertTrue(GameEngine.newGame(Difficulty.EASY, GameMode.STRATEGIC, seed = 1).upcoming().isEmpty())
     }

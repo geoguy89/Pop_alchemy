@@ -18,3 +18,9 @@ expect fun localDay(epochMillis: Long): Long
 
 /** A day number as a long date, e.g. "Saturday, October 3". */
 expect fun formatDay(day: Long): String
+
+/** Cryptographically secure random bytes (chat keys and nonces). */
+expect fun secureRandomBytes(n: Int): ByteArray
+
+/** True in the web version (iPhone, iPad, any browser). */
+expect val isWeb: Boolean

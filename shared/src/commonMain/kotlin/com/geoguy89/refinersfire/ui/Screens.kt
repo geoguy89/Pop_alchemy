@@ -36,7 +36,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -257,6 +259,11 @@ private fun OptionsPanel(vm: GameViewModel) {
                     style = bodyStyle(12.sp, Palette.parchment.copy(alpha = 0.7f)), textAlign = TextAlign.Center,
                 )
             }
+        } else if (com.geoguy89.refinersfire.isWeb) {
+            Text(
+                "On iPhone and iPad, notifications work once the game is on your Home Screen. Chats, challenges and requests always show up here in the game.",
+                style = bodyStyle(12.sp, Palette.parchment.copy(alpha = 0.7f)), textAlign = TextAlign.Center,
+            )
         }
         if (vm.updater.supported) {
             OptionSwitch("Check for updates", s.checkUpdates, switchColors) { vm.click(); vm.updateSettings(s.copy(checkUpdates = it)) }
@@ -286,7 +293,9 @@ private fun OptionsPanel(vm: GameViewModel) {
             }
         }
         Text("Share Scores", style = bodyStyle(15.sp, bold = true), modifier = Modifier.fillMaxWidth())
-        Choice(ShareMode.entries, vm.shareMode, { it.label }) { vm.setShareMode(it) }
+        // Local (same Wi-Fi) sharing isn't possible from a web page.
+        val shareModes = if (com.geoguy89.refinersfire.isWeb) ShareMode.entries - ShareMode.LOCAL else ShareMode.entries
+        Choice(shareModes, vm.shareMode, { it.label }) { vm.setShareMode(it) }
         Text(
             when (vm.shareMode) {
                 ShareMode.HIDDEN -> "Your scores stay on this device (friends you add still see them). The server keeps no record of when you play: friends see \"Activity hidden\" and you never show as online."
@@ -437,12 +446,17 @@ private fun GameOverPanel(vm: GameViewModel, o: Overlay.GameOver) {
  */
 @Composable
 fun NamePanel(vm: GameViewModel, firstTime: Boolean) {
-    var name by rememberSaveable { mutableStateOf(if (firstTime) "" else vm.settings.playerName) }
+    // The cursor starts after the current name, so Backspace edits it (on the web a tap can leave it at the start).
+    var field by rememberSaveable(stateSaver = TextFieldValue.Saver) {
+        val initial = if (firstTime) "" else vm.settings.playerName
+        mutableStateOf(TextFieldValue(initial, TextRange(initial.length)))
+    }
+    val name = field.text
     val valid = GameViewModel.cleanName(name) != null
     GamePanel(if (firstTime) "Choose Your Player Name" else "Change Your Name", if (firstTime) null else vm::pop) {
         if (firstTime) Text("Welcome, refiner! What should we call you?", style = bodyStyle(15.sp), textAlign = TextAlign.Center)
         OutlinedTextField(
-            name, { name = it.take(GameViewModel.NAME_MAX) }, singleLine = true,
+            field, { if (it.text.length <= GameViewModel.NAME_MAX) field = it }, singleLine = true,
             label = { Text("Player name", style = bodyStyle(12.sp)) },
             textStyle = bodyStyle(18.sp, bold = true),
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done, capitalization = androidx.compose.ui.text.input.KeyboardCapitalization.Words),

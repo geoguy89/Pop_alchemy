@@ -3,7 +3,7 @@
 *"Faith is the confidence that what we hope for will actually happen; it gives us assurance about things we cannot
 see."* (Hebrews 11:1, NLT)
 
-A tile-matching puzzle for Android phones and Windows, **optimized for foldable phones**. Place stones on a board of
+A tile-matching puzzle for Android phones, iPhone, iPad and Windows, **optimized for foldable phones**. Place stones on a board of
 lead; fill a row or column and it turns to gold. Refine the whole board to move on. Play alone, against friends in
 real time, or send them a challenge to answer when they can.
 
@@ -15,7 +15,8 @@ real time, or send them a challenge to answer when they can.
 | ![](docs/screenshots/title.png) | ![](docs/screenshots/phone_game.png) | ![](docs/screenshots/match.png) |
 
 **[Download the latest version](../../releases/latest)**: the Android APK, a Windows installer, or a portable
-Windows zip.
+Windows zip. **On iPhone or iPad**, open **https://geoguy89.github.io/refiners-fire/** in Safari
+([how to install it](#installing-on-iphone-and-ipad)).
 
 ---
 
@@ -68,6 +69,36 @@ Version**. You can also check any time in **Options → Check Now**.
 * **Nothing happens when you tap the APK**: open it from the **Files** app → **Downloads** instead.
 * **Found a bug in the game?** Open **Options → Report a Bug**, describe what happened and tap **Send**. Your
   player name, the game version and a short log of recent activity go with it (never your chats).
+
+## Installing on iPhone and iPad
+
+There's nothing to download from the App Store. The game runs from a web page, and you add it to your Home Screen so it
+opens full screen like any other app. You need **iOS or iPadOS 18.2 or newer** (Settings → General → Software Update).
+
+1. Open **Safari** and go to **https://geoguy89.github.io/refiners-fire/**. It has to be Safari: other browsers on
+   iPhone can't add it properly.
+2. Tap the **Share** button. On iPhone it's the square with an arrow at the bottom of the screen (tap **⋯** first if
+   you don't see it); on iPad it's at the top right.
+3. Scroll down and tap **Add to Home Screen**, then **Add**.
+4. Open **Refiner's Fire** from your Home Screen (not from Safari), choose your player name, and play.
+5. The first time you tap the screen after signing in, iOS asks whether the game may send **notifications**. Tap
+   **Allow** to hear about messages, challenges, pokes, friend requests and friends' daily Manna while the game is
+   closed. You can turn them off in **Options → Notifications**, or in the iPhone's **Settings → Notifications →
+   Refiner's Fire**.
+
+Good to know:
+
+* **Updates are automatic.** Each time you open the game it picks up the newest version by itself.
+* **Your progress is saved on that device**, in the Home Screen app. Removing the app from your Home Screen erases its
+  scores and saved games, and so does Settings → Safari → Clear History and Website Data.
+* Notifications only work in the Home Screen app. If you play in a Safari tab instead, messages, challenges and
+  requests still show up inside the game whenever it's open.
+* Sharing scores over the same Wi-Fi (**Local** sharing and the **Nearby** list) isn't available on iPhone and iPad;
+  **Global** and **Friends** work as usual.
+* It plays offline once it's been opened, apart from the things that need other players.
+* **If the screen says your browser is too old**, update iOS (step above) and open the page in Safari again.
+* **No sound?** Check the ring/silent switch (or Control Centre), then tap the board once: iPhone starts the game's
+  sound on your first tap.
 
 ## Getting started
 
@@ -197,7 +228,8 @@ Turning or folding the phone never loses your place.
   left, says **No Hints Left** once they're used, and the game tells you when you've just used your last. Until you
   clear that board, the forge can't cool below one level.
 * **Guessing instead of using a hint**: tapping a square the stone can't legally go isn't free either. Every second
-  wrong guess on a piece stokes the forge a level, the same as a hint would.
+  wrong guess on a piece stokes the forge a level, the same as a hint would. Tapping a square that already has a stone
+  on it never counts as a guess.
 * **Difficulty**: Easy starts on board 1, Average on board 6, Hard on board 11.
 
 ### Game modes
@@ -317,7 +349,7 @@ results online. Your scores appear on the Global board only while Share Scores i
 * **Options → Pieces** uses any theme's pieces with any other theme.
 * Each board has its own engraving: the seal, the breastplate, day and night, the vine, the lampstand, the refiner's
   furnace, the anchor, the tablets and the rose of Sharon.
-* **204 achievements** to earn, from first steps to rare feats that take months (daily Manna streaks, puzzles,
+* **210 achievements** to earn, from first steps to rare feats that take months (daily Manna streaks, puzzles,
   Iron Forge). They're never announced mid-game.
 
 | Garden | Starlight | Puzzles |

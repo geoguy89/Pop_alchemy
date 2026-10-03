@@ -14,3 +14,9 @@ actual fun localDay(epochMillis: Long): Long =
 /** A day number as a long, friendly date: "Saturday, October 3". */
 actual fun formatDay(day: Long): String =
     java.time.LocalDate.ofEpochDay(day).format(java.time.format.DateTimeFormatter.ofPattern("EEEE, MMMM d"))
+
+private val secure = java.security.SecureRandom()
+
+actual fun secureRandomBytes(n: Int): ByteArray = ByteArray(n).also(secure::nextBytes)
+
+actual val isWeb: Boolean = false

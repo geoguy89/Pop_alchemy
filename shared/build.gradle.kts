@@ -13,6 +13,15 @@ kotlin {
     jvm("desktop") {
         compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) }
     }
+    // The web version (iPhone, iPad and any browser): Kotlin/Wasm, installed from Safari with "Add to Home Screen".
+    @OptIn(org.jetbrains.kotlin.gradle.targets.js.dsl.ExperimentalWasmDsl::class)
+    wasmJs {
+        moduleName = "refinersfire"
+        browser {
+            commonWebpackConfig { outputFileName = "refinersfire.js" }
+        }
+        binaries.executable()
+    }
 
     // jvmCommonMain: code shared by the Android and desktop targets (java.net networking).
     @OptIn(org.jetbrains.kotlin.gradle.ExperimentalKotlinGradlePluginApi::class)

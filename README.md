@@ -50,9 +50,13 @@ When you're finished, you can switch *Allow from this source* back off for Chrom
 When a new version is out, the game offers it on the title screen: **Update Now**, **Later** or **Skip This
 Version**. You can also check any time in **Options → Check Now**.
 
-* **Update Now** downloads the update inside the game and opens Android's installer. Tap **Update**.
+* **Update Now** downloads and installs the update by itself. The game closes for a moment while it updates; tap
+  the **"Refiner's Fire updated"** notification (or the app icon) to carry on.
 * **The first time**, Android asks to let Refiner's Fire install apps. Tap **Settings**, switch on **Allow from this
-  source**, go back, and tap **Update**. After that it's one tap.
+  source**, go back, and tap **Update**. After that, updates need no taps at all (Android 12 and newer; older
+  versions still show one confirmation).
+* Google Play Protect may still occasionally ask you to confirm or scan an update, because the game doesn't come
+  from the Play Store. That screen comes from Google, not the game.
 * Updates install over the top: your scores, friends, achievements and saved games stay.
 
 ### Troubleshooting
@@ -70,15 +74,16 @@ Version**. You can also check any time in **Options → Check Now**.
 ### Your first game (solo)
 
 1. Open the game and choose a **player name**. Other players see you by this name.
-2. Tap **New Game** and pick a difficulty (**Easy**, **Average** or **Hard**) and a mode: **Strategic** (no clock) or
-   **Time Trial** (each stone has to be placed before the hourglass runs out).
+2. Tap **New Game** and pick a difficulty (**Easy**, **Average** or **Hard**) and a mode (see
+   [Game modes](#game-modes)). **Strategic** is the classic game with no clock; start there.
 3. Your next stone appears at the bottom. Tap a square on the board to place it. It has to touch another stone, and
    every stone it touches must match its **colour** or its **shape**.
 4. Fill a whole row or column and it clears, turning those squares to **gold**. Turn the whole board to gold to move
    on to the next board.
 5. Can't place a stone? Tap **Discard!** to melt it in the **forge**. The forge holds three; discard with it full
    and the game ends. Placing stones and clearing lines cools it down.
-6. Stuck? **Hint** lights up every square the stone can go, but it stokes the forge (see [How to play](#how-to-play)).
+6. Stuck? **Hint** lights up every square the stone can go, but it stokes the forge. You get two per board, and the
+   button counts them down ("Hint · 2 left", then "No Hints Left") (see [How to play](#how-to-play)).
 7. Leave whenever you like. The game saves itself, and **Continue** on the title screen picks up where you left off.
 
 **How to Play** on the title screen walks through the rules with pictures.
@@ -150,16 +155,31 @@ Turning or folding the phone never loses your place.
 * **The forge**: if a stone has nowhere to go (or you'd rather not place it), discard it into the forge. The forge
   holds three. Each discard raises it a level and each placement cools it one. Clearing a line empties it, and
   finishing a board cools it one level. Discard with the forge full and the game is over.
+* **Forge colours**: each level burns in the colour of whatever lit it, so you can see at a glance which levels will
+  cool and which won't: **orange** for your own discards, **green** for a hint, **violet** for wrong guesses and
+  **blue** for a rival's stoke in a Stoke Duel (in the Future theme, whose own fire is blue, stokes are pink and
+  wrong guesses amber). The lamps beside the forge match.
 * **Cornerstone**: matches anything, and anything can be placed beside it.
 * **Refiner's Hammer**: knocks out any stone you choose. Throwing it away costs no points and doesn't break your
   streak, though it still fills the forge.
 * **Hint**: lights up every square the current stone can go. It costs no points but stokes the forge: one level
-  for the first hint on a board, two for the second (two hints per board at most). Until you clear that board, the forge can't cool below
-  one level.
+  for the first hint on a board, two for the second. You get **two hints per board**: the button shows how many are
+  left, says **No Hints Left** once they're used, and the game tells you when you've just used your last. Until you
+  clear that board, the forge can't cool below one level.
 * **Guessing instead of using a hint**: tapping a square the stone can't legally go isn't free either. Every second
   wrong guess on a piece stokes the forge a level, the same as a hint would.
-* **Difficulty**: Easy starts on board 1, Average on board 6, Hard on board 11. **Strategic** has no clock; in
-  **Time Trial** each stone must be placed before the hourglass runs out.
+* **Difficulty**: Easy starts on board 1, Average on board 6, Hard on board 11.
+
+### Game modes
+
+| Mode | What's different | Points |
+|---|---|---|
+| **Strategic** | The classic game. No clock: take all the time you need. | ×1 |
+| **Time Trial** | Each stone must be placed before the hourglass runs out, or it's thrown into the forge. | ×2 |
+| **Iron Forge** | The forge holds just **one** level, so a second discard ends the game. For when Strategic feels too easy. | ×3 |
+| **Foresight** | The **next three stones** are shown beside the current one, so you can plan ahead. | ×1 |
+
+Each difficulty and mode has its own high-score table, so a Foresight score never crowds out a Hard one.
 
 ### Scoring
 
@@ -173,8 +193,8 @@ Turning or folding the phone never loses your place.
 | Board completed | 500 |
 | Discard | −10 |
 
-Everything, penalties included, is multiplied by the difficulty (Easy ×1, Average ×2, Hard ×4) and doubled again in
-Time Trial. The score never drops below zero. Every 10 stones placed without a discard is a streak.
+Everything, penalties included, is multiplied by the difficulty (Easy ×1, Average ×2, Hard ×4) and again by the mode
+(Time Trial ×2, Iron Forge ×3). The score never drops below zero. Every 10 stones placed without a discard is a streak.
 
 Titles run from **Dross** (0) through Raw Ore, Apprentice Smith, Journeyman, Silversmith, Goldsmith, Refiner and
 Master Refiner, to **Refiner of Silver**, **Refiner of Gold** and **Pure Gold** (40,000+).
@@ -187,12 +207,20 @@ Open **Friends & 1v1** from the title screen.
   you're both asked to accept. You can also add people from the Global or Nearby Hall of Fame. Friends are marked
   with a green check.
 * **Online status**: friends are listed online-first, with "Online now" or when they were last seen.
-* **Hall of Fame**: under its tabs (Global, Friends, Nearby, Mine) you can filter the list by difficulty — Easy,
-  Average, Hard, or All Levels — since a Hard score and an Easy score aren't really comparable.
+* **Hall of Fame** (from the title screen):
+  * **Your Bests** at the top shows your best score for every difficulty and mode, with your furthest board and
+    longest streak. Tap **Hide** to fold it away.
+  * Pick a list (**Global**, **Friends**, **Nearby** or **Mine**), then narrow it to one difficulty and/or mode, so
+    you're only compared with people who played the same game.
+  * **This Week** shows only scores set since Monday (midnight UTC), so everyone gets a fresh start each week.
+  * The top three stand on a gold, silver and bronze podium. If you're further down than the list goes, a
+    **You · #37 of 112** line shows where you stand.
+  * On the Global list, tap a player to add them or challenge them.
 * **Live 1v1**: challenge a friend who's online. You both play the same difficulty and get the same stones in the same
   order. A bar above your board shows your rival's score and progress, with a banner whenever they clear a board.
   Tap **Peek** to see their board, then **Back to My Board**. Tap **Chat** at the bottom of the screen to talk
-  without leaving the match. The challenger picks the match type:
+  without leaving the match. The challenger picks the rules (**Strategic**, **Iron Forge** or **Foresight**, where
+  you both see the same stones coming) and the match type:
 
   | Match | How to win |
   |---|---|

@@ -8,6 +8,8 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -38,7 +40,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.geoguy89.refinersfire.game.FORGE_CAPACITY
+import com.geoguy89.refinersfire.ThemeId
+import com.geoguy89.refinersfire.game.ForgeSource
 import com.geoguy89.refinersfire.game.GameState
 import com.geoguy89.refinersfire.game.Piece
 import com.geoguy89.refinersfire.game.Ranks
@@ -54,6 +57,28 @@ fun pieceName(p: Piece): String = when (p) {
     is Piece.Stone -> "${p.color.displayName} ${GlyphPaths.name(p.glyph)}"
     Piece.Cornerstone -> "Cornerstone"
     Piece.Hammer -> "Refiner's Hammer"
+}
+
+/** Foresight: the next stones in small wells, nearest first. Nothing is drawn in other modes. */
+@Composable
+fun NextStrip(vm: GameViewModel, modifier: Modifier = Modifier) {
+    val next = vm.upcoming
+    if (next.isEmpty()) return
+    Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)) {
+        Text("Next", style = bodyStyle(13.sp, Palette.goldLight, bold = true))
+        next.forEachIndexed { i, piece ->
+            Canvas(
+                Modifier.size(if (i == 0) 44.dp else 36.dp)
+                    .semantics { contentDescription = "Coming ${if (i == 0) "next" else "after that"}: ${pieceName(piece)}" },
+            ) {
+                val c = center
+                val r = size.minDimension / 2f
+                drawCircle(Brush.linearGradient(listOf(Palette.brassLight, Palette.brass, Palette.brassDark), c - Offset(r, r), c + Offset(r, r)), r, c)
+                drawCircle(Brush.radialGradient(Palette.colors.well, c, r), r * 0.84f, c)
+                drawPiece(piece, c, r * 1.3f, alpha = if (i == 0) 1f else 0.8f, time = vm.fx.now)
+            }
+        }
+    }
 }
 
 /** The stone in hand, floating on a brass pedestal. */
@@ -98,18 +123,46 @@ fun HandSlot(vm: GameViewModel, state: GameState, modifier: Modifier = Modifier,
     }
 }
 
-private val StokeBlue = Color(0xFF4AA8FF)
+/**
+ * Each cause of a forge level burns in its own colour: your discards in the theme's fire, a rival's stokes, a hint and
+ * wrong guesses each different (Future's own fire is already blue and violet, so it gets other colours for those).
+ * Returns the bright, middle and deep shades.
+ */
+fun forgeColors(source: ForgeSource): Triple<Color, Color, Color> {
+    val future = Palette.theme == ThemeId.FUTURE
+    return when (source) {
+        ForgeSource.DISCARD -> Triple(Color(0xFFFFD27A), Palette.ember, Palette.lava)
+        ForgeSource.STOKE -> if (future) Triple(Color(0xFFFFC2D8), Color(0xFFFF4D8D), Color(0xFF8A1040))
+            else Triple(Color(0xFFB8E6FF), Color(0xFF4AA8FF), Color(0xFF1B3F9E))
+        ForgeSource.HINT -> Triple(Color(0xFFD8FFD0), Color(0xFF5BE37A), Color(0xFF14632A))
+        ForgeSource.MISS -> if (future) Triple(Color(0xFFFFE7B0), Color(0xFFFFB02E), Color(0xFF7A4A00))
+            else Triple(Color(0xFFE6D2FF), Color(0xFFB07CFF), Color(0xFF4B1F99))
+    }
+}
+
+/** A short name for what lit a forge level, for the legend and accessibility. */
+fun forgeSourceName(source: ForgeSource) = when (source) {
+    ForgeSource.DISCARD -> "discard"
+    ForgeSource.STOKE -> "rival's stoke"
+    ForgeSource.HINT -> "hint"
+    ForgeSource.MISS -> "wrong guesses"
+}
 
 /** The forge: an egg-shaped crucible whose molten level rises with each discard. Tapping it discards. */
 @Composable
 fun Forge(vm: GameViewModel, state: GameState, modifier: Modifier = Modifier, showLabel: Boolean = true) {
-    val level by animateFloatAsState(state.forge.toFloat() / FORGE_CAPACITY, tween(700), label = "forge")
+    val capacity = state.forgeCapacity
+    val levels = state.forgeLevels
+    val level by animateFloatAsState(state.forge.toFloat() / capacity, tween(700), label = "forge")
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Canvas(
             Modifier
                 .fillMaxWidth()
                 .aspectRatio(0.78f)
-                .semantics { contentDescription = "Forge ${state.forge} of $FORGE_CAPACITY. Tap to discard." }
+                .semantics {
+                    val causes = levels.groupingBy { it }.eachCount().entries.joinToString { "${it.value} from ${forgeSourceName(it.key)}" }
+                    contentDescription = "Forge ${state.forge} of $capacity" + (if (causes.isNotEmpty()) " ($causes)" else "") + ". Tap to discard."
+                }
                 .clickable(remember { MutableInteractionSource() }, indication = null, role = Role.Button) { vm.discard() },
         ) {
             val t = vm.fx.now
@@ -117,7 +170,7 @@ fun Forge(vm: GameViewModel, state: GameState, modifier: Modifier = Modifier, sh
             val h = size.height
             val egg = Rect(w * 0.1f, h * 0.04f, w * 0.9f, h * 0.9f)
             val inner = Rect(egg.left + w * 0.09f, egg.top + w * 0.09f, egg.right - w * 0.09f, egg.bottom - w * 0.09f)
-            val danger = state.forge >= FORGE_CAPACITY
+            val danger = state.forge >= capacity
             // Base stand.
             drawRect(Brush.verticalGradient(listOf(Palette.brass, Palette.brassDark), h * 0.86f, h), Offset(w * 0.28f, h * 0.86f), Size(w * 0.44f, h * 0.12f))
             drawOval(Color.Black, egg.topLeft + Offset(2f, 5f), egg.size, alpha = 0.5f)
@@ -142,11 +195,15 @@ fun Forge(vm: GameViewModel, state: GameState, modifier: Modifier = Modifier, sh
                     close()
                 }
                 drawPath(lava, Brush.verticalGradient(listOf(Color(0xFFFFD27A), Palette.ember, Palette.lava, Color(0xFF6A0E06)), surface, inner.bottom))
-                // Levels a rival stoked (Stoke Duel) burn blue, underneath your own.
-                if (state.stoked > 0) {
-                    val stokeTop = inner.bottom - inner.height * (0.06f + 0.9f * state.stoked / FORGE_CAPACITY.toFloat())
-                    clipRect(top = maxOf(stokeTop, surface - inner.height * 0.03f)) {
-                        drawPath(lava, Brush.verticalGradient(listOf(Color(0xFFB8E6FF), StokeBlue, Color(0xFF1B3F9E), Color(0xFF0B1850)), surface, inner.bottom))
+                // Each level that isn't one of your own discards burns in its cause's colour, in its own band.
+                fun levelY(f: Float) = inner.bottom - inner.height * (0.06f + 0.9f * f / capacity)
+                levels.forEachIndexed { k, source ->
+                    if (source == ForgeSource.DISCARD) return@forEachIndexed
+                    val (bright, main, deep) = forgeColors(source)
+                    val bandTop = if (k == levels.lastIndex) surface - inner.height * 0.04f else levelY(k + 1f)
+                    val bandBottom = if (k == 0) inner.bottom else levelY(k.toFloat())
+                    clipRect(top = bandTop, bottom = bandBottom) {
+                        drawPath(lava, Brush.verticalGradient(listOf(bright, main, deep, Color.Black.copy(alpha = 0.6f)), surface, inner.bottom))
                     }
                 }
                 // Crusty dark patches drifting on the melt.
@@ -183,12 +240,12 @@ fun Forge(vm: GameViewModel, state: GameState, modifier: Modifier = Modifier, sh
             }
             drawOval(Color.Black, inner.topLeft, inner.size, alpha = 0.7f, style = Stroke(w * 0.02f))
             // Level lamps.
-            for (k in 0 until FORGE_CAPACITY) {
-                val ly = egg.bottom - egg.height * (0.25f + 0.25f * k)
+            for (k in 0 until capacity) {
+                // Iron Forge's single lamp sits in the middle; three lamps climb the side.
+                val ly = if (capacity == 1) egg.bottom - egg.height * 0.5f else egg.bottom - egg.height * (0.25f + 0.25f * k)
                 val lc = Offset(egg.right + w * 0.02f, ly)
                 val on = state.forge > k
-                val lamp = if (k < state.stoked) StokeBlue else Palette.ember
-                val deep = if (k < state.stoked) Color(0xFF1B3F9E) else Palette.lava
+                val (_, lamp, deep) = forgeColors(levels.getOrElse(k) { ForgeSource.DISCARD })
                 drawCircle(Color(0xFF1C130C), w * 0.055f, lc)
                 if (on) {
                     drawCircle(lamp, w * 0.1f, lc, alpha = 0.25f)
@@ -200,8 +257,8 @@ fun Forge(vm: GameViewModel, state: GameState, modifier: Modifier = Modifier, sh
         }
         if (showLabel) {
             FitText(
-                if (state.forge >= FORGE_CAPACITY) "Forge full!" else "Forge ${state.forge}/$FORGE_CAPACITY",
-                bodyStyle(13.sp, if (state.forge >= FORGE_CAPACITY) Palette.ember else Palette.parchment, bold = true),
+                if (state.forge >= capacity) "Forge full!" else "Forge ${state.forge}/$capacity",
+                bodyStyle(13.sp, if (state.forge >= capacity) Palette.ember else Palette.parchment, bold = true),
             )
         }
     }

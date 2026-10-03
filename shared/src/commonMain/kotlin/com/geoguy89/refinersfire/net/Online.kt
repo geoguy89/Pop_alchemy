@@ -144,6 +144,8 @@ data class Invite(
     val ageMs: Long = 0,
     val goalType: String = "time",
     val goalValue: Int = 8,
+    /** Strategic, Iron Forge or Foresight. */
+    val mode: GameMode = GameMode.STRATEGIC,
 ) {
     val goal: MatchGoal get() = MatchGoal(goalType, goalValue)
 }
@@ -209,7 +211,17 @@ data class SyncResponse(
 
 @Serializable private data class RegisterBody(val name: String)
 @Serializable private data class ProfileBody(val name: String? = null, val publicKey: String? = null, val hideActivity: Boolean? = null, val pushToken: String? = null)
-@Serializable private data class LeaderboardResponse(val players: List<LeaderboardEntry>)
+@Serializable private data class LeaderboardResponse(val players: List<LeaderboardEntry>, val me: LeaderboardStanding? = null)
+
+/** Where the player stands on a leaderboard: their rank among [total] players, with their [best] score. */
+@Serializable
+data class LeaderboardStanding(val rank: Int, val total: Int, val best: Long)
+
+/** Which slice of the Global board: one difficulty and/or mode (null = all), all time or this week. */
+data class BoardKey(val difficulty: Difficulty? = null, val mode: GameMode? = null, val week: Boolean = false)
+
+/** One fetched slice of the Global board. */
+data class BoardResult(val players: List<LeaderboardEntry>, val me: LeaderboardStanding?)
 @Serializable private data class ChatBody(val to: String, val nonce: String, val ct: String)
 @Serializable private data class AsyncCreateBody(val playerId: String, val difficulty: Difficulty, val boards: Int)
 @Serializable data class AsyncCreated(val id: String, val seed: Long, val difficulty: Difficulty, val boards: Int)
@@ -220,7 +232,7 @@ data class SyncResponse(
 @Serializable private data class PlayerBody(val playerId: String)
 @Serializable private data class RespondBody(val id: String, val accept: Boolean)
 @Serializable private data class IdBody(val id: String)
-@Serializable private data class InviteBody(val playerId: String, val difficulty: Difficulty, val goalType: String, val goalValue: Int)
+@Serializable private data class InviteBody(val playerId: String, val difficulty: Difficulty, val goalType: String, val goalValue: Int, val mode: GameMode = GameMode.STRATEGIC)
 @Serializable private data class FriendResult(val status: String, val name: String)
 @Serializable private data class ErrorBody(val error: String)
 @Serializable private data class InviteCreated(val id: String)
@@ -228,6 +240,9 @@ data class SyncResponse(
 @Serializable private data class GlobalResponse(val scores: List<ScoreDto>)
 
 internal val wireJson = Json { ignoreUnknownKeys = true; encodeDefaults = true; explicitNulls = false }
+
+/** The most scores sent in one upload (the server accepts up to 80). */
+private const val MAX_UPLOAD = 80
 
 // ---- Client ---------------------------------------------------------------------------------------------------------
 
@@ -255,6 +270,9 @@ class OnlineService(
     var asyncChallenges by mutableStateOf<List<AsyncChallenge>>(emptyList())
         private set
     var leaderboard by mutableStateOf<List<LeaderboardEntry>>(emptyList())
+        private set
+    /** Slices of the Global board fetched so far (by difficulty, mode and period). */
+    var boards by mutableStateOf<Map<BoardKey, BoardResult>>(emptyMap())
         private set
     /** False after a request fails to reach the server; true again on the next success. */
     var reachable by mutableStateOf(true)
@@ -321,7 +339,7 @@ class OnlineService(
     fun sync(done: () -> Unit = {}) {
         if (account == null || syncing) return
         syncing = true
-        send("GET", "/v1/sync", null, SyncResponse.serializer(), onError = { syncing = false; done() }) { r ->
+        send("GET", "/v1/sync?v=2", null, SyncResponse.serializer(), onError = { syncing = false; done() }) { r ->
             syncing = false
             if (r != null) {
                 friends = r.friends
@@ -359,8 +377,20 @@ class OnlineService(
         send<Unit>("POST", "/v1/profile", encode(ProfileBody.serializer(), ProfileBody(pushToken = token)), null)
     }
 
-    fun fetchLeaderboard() {
-        send("GET", "/v1/leaderboard", null, LeaderboardResponse.serializer()) { r -> if (r != null) leaderboard = r.players }
+    /** Fetch one slice of the Global board; the all-modes, all-time slice also becomes [leaderboard]. */
+    fun fetchLeaderboard(key: BoardKey = BoardKey()) {
+        val q = buildString {
+            append("/v1/leaderboard?v=2")
+            key.difficulty?.let { append("&difficulty=").append(it.name) }
+            key.mode?.let { append("&mode=").append(it.name) }
+            if (key.week) append("&period=week")
+        }
+        send("GET", q, null, LeaderboardResponse.serializer()) { r ->
+            if (r != null) {
+                boards = boards + (key to BoardResult(r.players, r.me))
+                if (key == BoardKey()) leaderboard = r.players
+            }
+        }
     }
 
     fun publishKey(publicKey: String) {
@@ -386,10 +416,13 @@ class OnlineService(
         send<Unit>("POST", "/v1/chat/send", encode(ChatBody.serializer(), ChatBody(to, sealed.nonce, sealed.ct)), null, onError = onError)
     }
 
-    /** Uploads this device's own Hall of Fame. [shareGlobal] also lists it on the global board. */
+    /**
+     * Uploads this device's own Hall of Fame (its best few per difficulty and mode, and this week's bests). [shareGlobal]
+     * also lists it on the global board.
+     */
     fun pushScores(own: List<HighScore>, shareGlobal: Boolean) {
         if (account == null) return
-        val body = ScoresBody(own.sortedByDescending { it.score }.take(10).map(ScoreDto::of), shareGlobal)
+        val body = ScoresBody(own.sortedByDescending { it.score }.take(MAX_UPLOAD).map(ScoreDto::of), shareGlobal)
         send<Unit>("POST", "/v1/scores", encode(ScoresBody.serializer(), body), null)
     }
 
@@ -420,8 +453,8 @@ class OnlineService(
         send<Unit>("POST", "/v1/friends/remove", encode(PlayerBody.serializer(), PlayerBody(playerId)), null) { sync() }
     }
 
-    fun invite(playerId: String, difficulty: Difficulty, goal: MatchGoal, onError: (String) -> Unit) {
-        send("POST", "/v1/match/invite", encode(InviteBody.serializer(), InviteBody(playerId, difficulty, goal.type, goal.value)), InviteCreated.serializer(), onError = onError) { sync() }
+    fun invite(playerId: String, difficulty: Difficulty, goal: MatchGoal, mode: GameMode, onError: (String) -> Unit) {
+        send("POST", "/v1/match/invite", encode(InviteBody.serializer(), InviteBody(playerId, difficulty, goal.type, goal.value, mode)), InviteCreated.serializer(), onError = onError) { sync() }
     }
 
     /** Accepting returns the match id straight away, so the accepter doesn't wait for the next sync. */

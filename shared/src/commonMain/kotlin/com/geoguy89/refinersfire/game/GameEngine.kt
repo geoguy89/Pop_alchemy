@@ -35,6 +35,10 @@ data class GameState(
     val stoked: Int = 0,
     /** Wrong placements tried on the current piece (probing for a legal square instead of using a hint). */
     val wrongTries: Int = 0,
+    /** What lit each forge level, bottom first (for its colour). Older saves have none: those count as discards. */
+    val forgeSources: List<ForgeSource> = emptyList(),
+    /** A seeded piece order outside a match (Foresight, Manna), so the coming stones are known in advance. */
+    val pieceSeed: Long? = null,
     val score: Long = 0,
     val streak: Int = 0,
     val bestStreak: Int = 0,
@@ -62,6 +66,13 @@ data class GameState(
     val boardEmpty: Boolean get() = cells.all { it == null }
     val rank: String get() = Ranks.rankFor(score)
     val multiplier: Int get() = GameEngine.multiplier(difficulty, mode)
+    /** Iron Forge holds one level; everything else three. */
+    val forgeCapacity: Int get() = if (mode == GameMode.IRON_FORGE) 1 else FORGE_CAPACITY
+    /** The seed the pieces come from, if they come in a fixed order. */
+    val seed: Long? get() = matchSeed ?: pieceSeed
+    /** [forgeSources] padded to the forge level (older saves recorded none). */
+    val forgeLevels: List<ForgeSource> get() =
+        List((forge - forgeSources.size).coerceAtLeast(0)) { ForgeSource.DISCARD } + forgeSources.takeLast(forge)
 }
 
 /** A cleared line whose stones all share a symbol ([perfect]: and a colour too). */
@@ -126,14 +137,49 @@ class GameEngine(state: GameState) {
                     current = Piece.Cornerstone,
                     pieceTimeLeftMillis = pieceTimeLimit(mode, board),
                     rng = Rng(seed),
+                    // Foresight shows what's coming, so its pieces follow a fixed sequence (like a match).
+                    pieceSeed = if (mode == GameMode.FORESIGHT) seed else null,
                 ),
             )
         }
 
-        /** A 1v1 match: same seed on both devices, Strategic rules, starting board by difficulty. */
-        fun newMatch(difficulty: Difficulty, seed: Long): GameEngine {
-            val base = newGame(difficulty, GameMode.STRATEGIC, seed).state
-            return GameEngine(base.copy(matchSeed = seed))
+        /** A 1v1 match: same seed on both devices, starting board by difficulty. Strategic unless [mode] says otherwise. */
+        fun newMatch(difficulty: Difficulty, seed: Long, mode: GameMode = GameMode.STRATEGIC): GameEngine {
+            val base = newGame(difficulty, if (mode == GameMode.TIME_TRIAL) GameMode.STRATEGIC else mode, seed).state
+            return GameEngine(base.copy(matchSeed = seed, pieceSeed = null))
+        }
+
+        /**
+         * Keep the forge's colour record in step with a new level. Added levels go on top with [added]. When it
+         * cools, rival stokes beyond [stoked] go first, then the topmost level that's free to cool (a hint's level
+         * is held while [hintHeld] is 1).
+         */
+        fun reconcileSources(
+            before: GameState, newForge: Int, stoked: Int, hintHeld: Int, added: ForgeSource = ForgeSource.DISCARD,
+        ): List<ForgeSource> {
+            val list = before.forgeLevels.toMutableList()
+            while (list.size < newForge) list += added
+            while (list.size > newForge && list.count { it == ForgeSource.STOKE } > stoked) {
+                list.removeAt(list.lastIndexOf(ForgeSource.STOKE))
+            }
+            while (list.size > newForge) {
+                val hints = list.count { it == ForgeSource.HINT }
+                val i = list.indices.reversed().firstOrNull { k ->
+                    when (list[k]) {
+                        ForgeSource.STOKE -> false
+                        ForgeSource.HINT -> hints > hintHeld
+                        else -> true
+                    }
+                } ?: list.lastIndex
+                list.removeAt(i)
+            }
+            // Never show more stoked levels than the rules hold.
+            var extra = list.count { it == ForgeSource.STOKE } - stoked
+            for (k in list.indices.reversed()) {
+                if (extra <= 0) break
+                if (list[k] == ForgeSource.STOKE) { list[k] = ForgeSource.DISCARD; extra-- }
+            }
+            return list
         }
 
         /** The [index]th piece of a match's sequence. Depends only on the seed, the index and the board number. */
@@ -260,6 +306,7 @@ class GameEngine(state: GameState) {
             cells = cells,
             gold = gold,
             forge = forge,
+            forgeSources = reconcileSources(s, forge, stoked, hintHeld = forgeFloor),
             stoked = stoked,
             score = score,
             streak = streak,
@@ -295,12 +342,15 @@ class GameEngine(state: GameState) {
         val s = state
         if (s.gameOver) return emptyList()
         val streak = if (s.current is Piece.Hammer && !timedOut) s.streak else 0
-        if (s.forge >= FORGE_CAPACITY) {
+        if (s.forge >= s.forgeCapacity) {
             state = s.copy(gameOver = true, streak = streak, discards = s.discards + 1)
-            return listOf(GameEvent.Discarded(s.current, FORGE_CAPACITY + 1, timedOut), GameEvent.GameOver)
+            return listOf(GameEvent.Discarded(s.current, s.forgeCapacity + 1, timedOut), GameEvent.GameOver)
         }
         val penalty = if (timedOut || s.current is Piece.Hammer) 0L else minOf(DISCARD_PENALTY * s.multiplier, s.score)
-        val next = s.copy(forge = s.forge + 1, streak = streak, discards = s.discards + 1, score = s.score - penalty)
+        val next = s.copy(
+            forge = s.forge + 1, forgeSources = s.forgeLevels + ForgeSource.DISCARD,
+            streak = streak, discards = s.discards + 1, score = s.score - penalty,
+        )
         val withPiece = withNextPiece(next).copy(pieceTimeLeftMillis = pieceTimeLimit(s.mode, s.board))
         state = withPiece
         return listOf(GameEvent.Discarded(s.current, withPiece.forge, timedOut, penalty), GameEvent.NewPiece(withPiece.current))
@@ -322,8 +372,11 @@ class GameEngine(state: GameState) {
     fun stoke(levels: Int): Int {
         val s = state
         if (s.gameOver) return 0
-        val next = (s.forge + levels).coerceAtMost(FORGE_CAPACITY)
-        state = s.copy(forge = next, stoked = s.stoked + (next - s.forge), gameOver = s.forge + levels > FORGE_CAPACITY)
+        val next = (s.forge + levels).coerceAtMost(s.forgeCapacity)
+        state = s.copy(
+            forge = next, stoked = s.stoked + (next - s.forge), gameOver = s.forge + levels > s.forgeCapacity,
+            forgeSources = s.forgeLevels + List(next - s.forge) { ForgeSource.STOKE },
+        )
         return next - s.forge
     }
 
@@ -333,9 +386,11 @@ class GameEngine(state: GameState) {
         if (s.gameOver || s.hintsThisBoard >= MAX_HINTS_PER_BOARD) return emptyList()
         // A hint stokes the forge: one level for the first on a board, two for the second (never past full). No
         // more than two per board. Until the board is cleared the forge can't cool below one level.
+        val forge = (s.forge + s.hintsThisBoard + 1).coerceAtMost(s.forgeCapacity)
         state = s.copy(
             hintsUsed = s.hintsUsed + 1,
-            forge = (s.forge + s.hintsThisBoard + 1).coerceAtMost(FORGE_CAPACITY),
+            forge = forge,
+            forgeSources = s.forgeLevels + List(forge - s.forge) { ForgeSource.HINT },
             hintsThisBoard = s.hintsThisBoard + 1,
         )
         return validCells()
@@ -356,7 +411,7 @@ class GameEngine(state: GameState) {
     }
 
     private fun withNextPiece(s: GameState): GameState {
-        val seed = s.matchSeed ?: return s.copy(current = drawPiece(s), wrongTries = 0)
+        val seed = s.seed ?: return s.copy(current = drawPiece(s), wrongTries = 0)
         // An empty board always gets the stone, without using up a piece of the shared sequence.
         if (s.boardEmpty) return s.copy(current = Piece.Cornerstone, wrongTries = 0)
         return s.copy(current = matchPiece(seed, s.pieceIndex, s.board), pieceIndex = s.pieceIndex + 1, wrongTries = 0)
@@ -372,8 +427,19 @@ class GameEngine(state: GameState) {
         if (s.gameOver) return false
         val tries = s.wrongTries + 1
         if (tries < 2) { state = s.copy(wrongTries = tries); return false }
-        state = s.copy(wrongTries = 0, forge = (s.forge + 1).coerceAtMost(FORGE_CAPACITY), gameOver = s.forge + 1 > FORGE_CAPACITY)
+        val forge = (s.forge + 1).coerceAtMost(s.forgeCapacity)
+        state = s.copy(
+            wrongTries = 0, forge = forge, gameOver = s.forge + 1 > s.forgeCapacity,
+            forgeSources = s.forgeLevels + List(forge - s.forge) { ForgeSource.MISS },
+        )
         return true
+    }
+
+    /** The next [n] stones after the current one, when the pieces come in a fixed order (Foresight); else none. */
+    fun upcoming(n: Int = 3): List<Piece> {
+        val s = state
+        val seed = s.seed ?: return emptyList()
+        return (0 until n).map { k -> matchPiece(seed, s.pieceIndex + k, s.board) }
     }
 
     private fun drawPiece(s: GameState): Piece {

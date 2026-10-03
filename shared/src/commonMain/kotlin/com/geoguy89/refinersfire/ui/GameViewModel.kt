@@ -16,7 +16,6 @@ import com.geoguy89.refinersfire.game.Achievements
 import com.geoguy89.refinersfire.game.GameEngine
 import com.geoguy89.refinersfire.game.LifetimeStats
 import com.geoguy89.refinersfire.game.Difficulty
-import com.geoguy89.refinersfire.game.FORGE_CAPACITY
 import com.geoguy89.refinersfire.game.GameEvent
 import com.geoguy89.refinersfire.game.GameMode
 import com.geoguy89.refinersfire.game.GameState
@@ -48,6 +47,8 @@ import com.geoguy89.refinersfire.net.MatchSession
 import com.geoguy89.refinersfire.net.NoHttp
 import com.geoguy89.refinersfire.net.NoLanTransport
 import com.geoguy89.refinersfire.net.OnlineService
+import com.geoguy89.refinersfire.net.LeaderboardStanding
+import com.geoguy89.refinersfire.net.BoardKey
 import com.geoguy89.refinersfire.DebugLog
 import com.geoguy89.refinersfire.net.NoPush
 import com.geoguy89.refinersfire.net.PushRegistrar
@@ -246,7 +247,7 @@ class GameViewModel(
             online.friends = emptyList()
             keyPublished = false
             // Make a fresh account straight away and put our scores back up.
-            online.ensureAccount(settings.playerName) { online.pushScores(highScores, settings.sharePlus); online.sync() }
+            online.ensureAccount(settings.playerName) { online.pushScores(store.scoresForUpload(), settings.sharePlus); online.sync() }
         }
         online.onSynced = { r ->
             store.saveFriends(r.friends)
@@ -268,7 +269,7 @@ class GameViewModel(
             retryPendingResults()
             if (!scoresPushed) {
                 scoresPushed = true
-                online.pushScores(highScores, settings.sharePlus)
+                online.pushScores(store.scoresForUpload(), settings.sharePlus)
             }
             // Our challenge was accepted: join the match.
             r.invites.firstOrNull { !it.incoming && it.status == "accepted" && it.matchId != null && it.ageMs < 5 * 60_000 && it.matchId !in joinedMatches }
@@ -417,8 +418,22 @@ class GameViewModel(
         _haptics.tryEmit(Haptic.TICK)
         val msg = if (cells.isEmpty()) "No home for this stone" else "Hint"
         fx.banner(msg, if (cells.isEmpty()) Palette.ember else Palette.hint, height = 0.42f, y = ROWS - 0.8f)
+        // Two per board: say plainly when that was the last one.
+        if (e.state.hintsThisBoard >= GameEngine.MAX_HINTS_PER_BOARD) {
+            fx.banner("That was your last hint for this board", Palette.ember, height = 0.36f, y = ROWS - 1.7f, duration = 2.4f)
+        }
         state = e.state
         persist()
+    }
+
+    /** Hints left on this board (two per board). */
+    val hintsLeft: Int get() = (GameEngine.MAX_HINTS_PER_BOARD - (state?.hintsThisBoard ?: 0)).coerceAtLeast(0)
+
+    /** The Hint button's label: how many are left, or why there are none. */
+    val hintLabel: String get() = when {
+        match != null -> "No Hints in 1v1"
+        hintsLeft == 0 -> "No Hints Left"
+        else -> "Hint · $hintsLeft left"
     }
 
     private fun handle(events: List<GameEvent>, origin: Int) {
@@ -470,7 +485,7 @@ class GameViewModel(
                 forgeFlareAt = fx.now
                 audio.play(Sfx.DISCARD)
                 _haptics.tryEmit(Haptic.HEAVY)
-                if (ev.forgeLevel == FORGE_CAPACITY) audio.play(Sfx.FORGE_WARNING, 0.9f)
+                if (ev.forgeLevel == e.state.forgeCapacity) audio.play(Sfx.FORGE_WARNING, 0.9f)
                 when {
                     ev.timedOut -> fx.banner("Time's up!", Palette.ember, height = 0.42f, y = ROWS - 0.8f)
                     ev.penalty > 0 -> fx.banner("Melted  -${ev.penalty}", Palette.invalid, height = 0.42f, y = ROWS - 0.8f)
@@ -496,7 +511,7 @@ class GameViewModel(
                 audio.play(Sfx.GAME_OVER)
                 // In a match you're out but the match goes on; the result comes from the server.
                 if (e.state.challengeId != null) finishChallengeRun(e.state)
-                else if (match == null) overlays = overlays + Overlay.GameOver(e.state, store.qualifies(e.state.score))
+                else if (match == null) overlays = overlays + Overlay.GameOver(e.state, store.qualifies(e.state.score, e.state.difficulty, e.state.mode))
             }
         }
         state = e.state
@@ -524,7 +539,7 @@ class GameViewModel(
             )
             highScores = store.loadHighScores()
             lastBroadcast = -100f
-            online.pushScores(highScores, settings.sharePlus)
+            online.pushScores(store.scoresForUpload(), settings.sharePlus)
         }
         store.saveGame(null)
         savedGame = null
@@ -619,9 +634,9 @@ class GameViewModel(
         online.setHideActivity(hide)
         if (mode == ShareMode.PLUS) {
             bump { it.copy(sharedGlobally = true) }
-            online.ensureAccount(settings.playerName) { online.pushScores(highScores, true); online.sync() }
+            online.ensureAccount(settings.playerName) { online.pushScores(store.scoresForUpload(), true); online.sync() }
         } else if (online.account != null) {
-            online.pushScores(highScores, false)
+            online.pushScores(store.scoresForUpload(), false)
         }
     }
 
@@ -717,9 +732,9 @@ class GameViewModel(
         online.removeFriend(friend.playerId)
     }
 
-    fun challenge(rival: Rival, difficulty: Difficulty, goal: MatchGoal) {
+    fun challenge(rival: Rival, difficulty: Difficulty, goal: MatchGoal, mode: GameMode = GameMode.STRATEGIC) {
         click()
-        online.invite(rival.playerId, difficulty, goal) { notice = it }
+        online.invite(rival.playerId, difficulty, goal, mode) { notice = it }
         overlays = overlays.filter { it !is Overlay.Challenge }
         lastSync = -100f
     }
@@ -905,7 +920,7 @@ class GameViewModel(
                         symbolLines = s.symbolLines + ev.bonuses.count { !it.perfect },
                         perfectLines = s.perfectLines + perfect,
                         perfectLineInMatch = s.perfectLineInMatch || (perfect > 0 && after.matchSeed != null),
-                        forgeSaves = s.forgeSaves + if (before?.forge == FORGE_CAPACITY) 1 else 0,
+                        forgeSaves = s.forgeSaves + if (before != null && before.forge == before.forgeCapacity) 1 else 0,
                     )
                 }
                 is GameEvent.BoardCleared -> {
@@ -1079,8 +1094,8 @@ class GameViewModel(
         persist() // Keep any single-player game safe; it resumes from the title afterwards.
         match = MatchSession(
             matchId, me.playerId, online, post, { fx.now },
-            onStart = { seed, difficulty, _ ->
-                adopt(GameEngine.newMatch(difficulty, seed))
+            onStart = { seed, difficulty, mode, _ ->
+                adopt(GameEngine.newMatch(difficulty, seed, mode))
                 overlays = emptyList()
                 screen = Screen.GAME
                 countGameStart()
@@ -1129,14 +1144,37 @@ class GameViewModel(
         val opponent = m.opponent ?: return
         val difficulty = m.difficulty
         val goal = m.goal
+        val mode = m.mode
         leaveMatch()
-        challenge(Rival(opponent.playerId, opponent.name), difficulty, goal)
+        challenge(Rival(opponent.playerId, opponent.name), difficulty, goal, mode)
     }
 
-    /** [difficulty] null shows every difficulty together; otherwise only scores set on that one. */
-    fun hallRows(tab: HallTab, difficulty: Difficulty? = null): List<HallRow> {
+    /**
+     * The Hall of Fame list for a tab. [difficulty] and [mode] (null = all) narrow it to one table; [week] keeps only
+     * this week's scores (since Monday 00:00 UTC).
+     */
+    fun hallRows(tab: HallTab, difficulty: Difficulty? = null, mode: GameMode? = null, week: Boolean = false): List<HallRow> =
+        allHallRows(tab, difficulty, mode, week).take(if (tab == HallTab.GLOBAL) 100 else Store.MAX_SCORES)
+
+    /** Where the player stands in that list: from the server for Global, counted here for the rest. */
+    fun hallStanding(tab: HallTab, difficulty: Difficulty? = null, mode: GameMode? = null, week: Boolean = false): LeaderboardStanding? {
+        if (tab == HallTab.GLOBAL) return online.boards[BoardKey(difficulty, mode, week)]?.me
+        val all = allHallRows(tab, difficulty, mode, week)
+        val i = all.indexOfFirst { it.isMe }
+        return if (i < 0) null else LeaderboardStanding(i + 1, all.size, all[i].score.score)
+    }
+
+    /** The player's best score in each table (difficulty and mode). */
+    fun bestsByTable(): Map<Pair<Difficulty, GameMode>, HighScore> =
+        highScores.groupBy { it.difficulty to it.mode }.mapValues { (_, l) -> l.maxBy { it.score } }
+
+    private fun allHallRows(tab: HallTab, difficulty: Difficulty?, mode: GameMode?, week: Boolean): List<HallRow> {
+        val weekStart = Store.weekStart(epochMillis())
+        fun fits(h: HighScore) = (difficulty == null || h.difficulty == difficulty) && (mode == null || h.mode == mode) &&
+            (!week || h.epochMillis >= weekStart)
         val myId = online.account?.playerId
-        val mine = highScores.map { HallRow(it, null, null, isMe = true) }
+        val myScores = if (week) (highScores + store.loadWeekScores()).distinct() else highScores
+        val mine = myScores.map { HallRow(it, null, null, isMe = true) }
         val rows = when (tab) {
             HallTab.MINE -> mine
             HallTab.NEARBY -> mine + peers.filter { it.direct }.flatMap { p -> p.scores.map { HallRow(it, "nearby", p.playerId, false) } }
@@ -1144,20 +1182,28 @@ class GameViewModel(
             HallTab.GLOBAL -> {
                 fun notMe(id: String?) = id == null || id != myId
                 // The ranked board: one line per player (their best).
-                val server = online.leaderboard.filter { notMe(it.playerId) }.map { HallRow(it.toHighScore(), if (it.online) "online" else null, it.playerId, false) }
+                // The server sends the slice already narrowed (and each player's best within it).
+                val board = online.boards[BoardKey(difficulty, mode, week)]?.players
+                    ?: if (difficulty == null && mode == null && !week) online.leaderboard else emptyList()
+                val server = board.filter { notMe(it.playerId) }.map { HallRow(it.toHighScore(), if (it.online) "online" else null, it.playerId, false) }
                 val relayed = peers.filter { it.open && notMe(it.playerId) }.flatMap { p -> p.scores.map { HallRow(it, if (p.direct) "nearby" else null, p.playerId, false) } }
                 val own = if (settings.sharePlus) mine else emptyList()
                 own + server + relayed
             }
         }
-        val byDifficulty = if (difficulty == null) rows else rows.filter { it.score.difficulty == difficulty }
-        val unique = byDifficulty.distinctBy { Triple(it.score.name, it.score.score, it.score.epochMillis) }
-        // Global ranks players, so each appears once with their best (for that difficulty, when one is chosen).
+        val unique = rows.filter { fits(it.score) }.distinctBy { Triple(it.score.name, it.score.score, it.score.epochMillis) }
+        // Global ranks players, so each appears once with their best (in the chosen table).
         val perPlayer = if (tab == HallTab.GLOBAL) unique.sortedByDescending { it.score.score }.distinctBy { it.playerId ?: (it.score.name + if (it.isMe) "#me" else "") } else unique
-        return perPlayer
-            .sortedByDescending { it.score.score }
-            .take(if (tab == HallTab.GLOBAL) 100 else Store.MAX_SCORES)
+        return perPlayer.sortedByDescending { it.score.score }
     }
+
+    /** Foresight: the next stones, shown beside the current one. Empty in other modes. */
+    val upcoming: List<Piece>
+        get() {
+            val s = state ?: return emptyList()
+            if (s.mode != GameMode.FORESIGHT) return emptyList()
+            return engine?.upcoming() ?: emptyList()
+        }
 
     fun isFriend(playerId: String?): Boolean = playerId != null && online.friends.any { it.playerId == playerId }
 
@@ -1222,6 +1268,8 @@ class GameViewModel(
     fun installUpdate() {
         val info = update ?: return
         click()
+        // The installer closes the game when it swaps in the new version, so save everything first.
+        persist()
         updateProgress = 0f
         updater.install(info, progress = { p -> post { updateProgress = p } }) { error ->
             post {

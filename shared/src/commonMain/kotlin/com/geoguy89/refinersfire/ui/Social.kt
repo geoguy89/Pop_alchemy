@@ -42,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.geoguy89.refinersfire.game.COLS
 import com.geoguy89.refinersfire.game.Difficulty
+import com.geoguy89.refinersfire.game.GameMode
 import com.geoguy89.refinersfire.game.ROWS
 import com.geoguy89.refinersfire.gfx.Palette
 import com.geoguy89.refinersfire.gfx.drawBrassPlate
@@ -65,7 +66,7 @@ private fun fieldColors() = OutlinedTextFieldDefaults.colors(
 private fun SectionTitle(text: String) =
     Text(text, style = bodyStyle(15.sp, Palette.goldLight, bold = true), modifier = Modifier.fillMaxWidth())
 
-private fun dim() = Palette.parchment.copy(alpha = 0.7f)
+internal fun dim() = Palette.parchment.copy(alpha = 0.7f)
 
 // ---- Connect with Player ------------------------------------------------------------------------------------------
 
@@ -190,12 +191,21 @@ private fun FriendRow(vm: GameViewModel, f: Friend, myBest: Long) {
     }
 }
 
+/** The rules a live 1v1 can be played under. */
+private val MATCH_MODES = listOf(GameMode.STRATEGIC, GameMode.IRON_FORGE, GameMode.FORESIGHT)
+private val MATCH_MODE_BLURBS = mapOf(
+    GameMode.STRATEGIC to "The usual rules.",
+    GameMode.IRON_FORGE to "Both forges hold just one level: a second discard knocks you out.",
+    GameMode.FORESIGHT to "You both see the next three stones coming.",
+)
+
 @Composable
 fun ChallengePanel(vm: GameViewModel, friend: Rival) {
     // Live 1v1 is Average or Hard only.
     var difficulty by rememberSaveable { mutableStateOf(if (vm.settings.difficulty == Difficulty.EASY) Difficulty.AVERAGE else vm.settings.difficulty) }
     var type by rememberSaveable { mutableStateOf(MatchType.TIMED) }
     var value by rememberSaveable { mutableStateOf(MatchType.TIMED.default) }
+    var mode by rememberSaveable { mutableStateOf(GameMode.STRATEGIC) }
     val goal = MatchGoal(type.id, if (value in type.values) value else type.default)
     GamePanel("Challenge ${friend.name}", vm::pop) {
         Text("You both play the same difficulty and get the same pieces in the same order.", style = bodyStyle(14.sp), textAlign = TextAlign.Center)
@@ -203,6 +213,11 @@ fun ChallengePanel(vm: GameViewModel, friend: Rival) {
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
             for (d in Difficulty.entries.filter { it != Difficulty.EASY }) BrassButton(d.displayName, { vm.click(); difficulty = d }, Modifier.weight(1f), dark = d != difficulty, fontSize = 15.sp)
         }
+        SectionTitle("Rules")
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+            for (m in MATCH_MODES) BrassButton(m.displayName, { vm.click(); mode = m }, Modifier.weight(1f), dark = m != mode, fontSize = 13.sp, minHeight = 40.dp)
+        }
+        Text(MATCH_MODE_BLURBS.getValue(mode), style = bodyStyle(12.sp, dim()), textAlign = TextAlign.Center)
         SectionTitle("Match type")
         for (row in MatchType.entries.chunked(3)) Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
             for (t in row) BrassButton(t.title, { vm.click(); type = t; value = t.default }, Modifier.weight(1f), dark = t != type, fontSize = 13.sp, minHeight = 40.dp)
@@ -217,7 +232,7 @@ fun ChallengePanel(vm: GameViewModel, friend: Rival) {
         }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             BrassButton("Back", vm::pop, Modifier.weight(1f), dark = true)
-            BrassButton("Send Challenge", { vm.challenge(friend, difficulty, goal) }, Modifier.weight(1f))
+            BrassButton("Send Challenge", { vm.challenge(friend, difficulty, goal, mode) }, Modifier.weight(1f))
         }
     }
 }
@@ -460,7 +475,7 @@ fun OpponentCard(vm: GameViewModel, m: MatchSession, modifier: Modifier = Modifi
             val status = when {
                 !o.connected -> m.forfeitAt?.let { "Reconnecting ${((it - t).coerceAtLeast(0f)).toInt()}s" } ?: "Reconnecting"
                 o.over -> "Out"
-                else -> "Board ${o.board} · Forge ${o.forge}/3"
+                else -> "Board ${o.board} · Forge ${o.forge}/${m.forgeCapacity}"
             }
             Text(status, style = bodyStyle(11.sp, if (!o.connected || o.over) Palette.ember else dim()))
         }
@@ -477,7 +492,7 @@ fun PeekPanel(vm: GameViewModel) {
     val m = vm.match ?: return
     val o = m.opp
     GamePanel(m.opponent?.name ?: "Opponent", vm::pop, maxWidth = 620.dp) {
-        Text("${o.score} · Board ${o.board} · Forge ${o.forge}/3" + if (o.over) " · Out" else "", style = bodyStyle(14.sp, Palette.goldLight, bold = true))
+        Text("${o.score} · Board ${o.board} · Forge ${o.forge}/${m.forgeCapacity}" + if (o.over) " · Out" else "", style = bodyStyle(14.sp, Palette.goldLight, bold = true))
         val t = vm.fx.now
         Canvas(Modifier.fillMaxWidth().aspectRatio(COLS / ROWS.toFloat())) {
             val cell = size.width / COLS
@@ -536,7 +551,10 @@ fun IncomingBanner(vm: GameViewModel) {
             if (invite != null) {
                 val article = if (invite.difficulty.displayName.first().lowercaseChar() in "aeiou") "an" else "a"
                 Text("${invite.name} challenges you to $article ${invite.difficulty.displayName} 1v1!", style = bodyStyle(15.sp, Palette.goldLight, bold = true), textAlign = TextAlign.Center)
-                Text(invite.goal.label(invite.difficulty), style = bodyStyle(13.sp, Palette.parchment))
+                Text(
+                    invite.goal.label(invite.difficulty) + if (invite.mode != GameMode.STRATEGIC) " · ${invite.mode.displayName}" else "",
+                    style = bodyStyle(13.sp, Palette.parchment),
+                )
                 if (vm.screen == Screen.GAME) Text("Your current game is saved.", style = bodyStyle(12.sp, dim()))
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     SmallBrass("Accept", { vm.respondToChallenge(invite.id, true) }, Modifier.weight(1f))

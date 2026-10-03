@@ -16,8 +16,10 @@ import java.net.URL
 import kotlin.concurrent.thread
 
 /**
- * Self-update from GitHub Releases: download the APK, then install it through a PackageInstaller session. Android
- * shows its own confirmation, and only accepts the update when it's signed with the same key as the installed app.
+ * Self-update from GitHub Releases: download the APK, then install it through a PackageInstaller session. On Android
+ * 12+ (with UPDATE_PACKAGES_WITHOUT_USER_ACTION) an app updating itself needs no confirmation screen; older versions,
+ * or a first install permission, still get Android's prompt. Android only accepts the update when it's signed with
+ * the same key as the installed app.
  */
 class AndroidUpdater(private val context: Context) : AppUpdater {
     override val supported = true
@@ -99,12 +101,47 @@ class InstallStatusReceiver : BroadcastReceiver() {
                 val confirm = intent.getParcelableExtra<Intent>(Intent.EXTRA_INTENT) ?: return
                 context.startActivity(confirm.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
             }
-            PackageInstaller.STATUS_SUCCESS -> Unit // The app restarts into the new version.
+            PackageInstaller.STATUS_SUCCESS -> Unit // The installer closes the game; UpdatedReceiver offers to reopen it.
             else -> Log.w("AndroidUpdater", "Install status: ${intent.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE)}")
         }
     }
 
     companion object {
         const val ACTION = "com.geoguy89.refinersfire.INSTALL_STATUS"
+    }
+}
+
+/**
+ * The game was just replaced by a newer version (the installer stops the old one). Android doesn't let an app
+ * relaunch itself from the background, so it posts a notification to tap instead.
+ */
+class UpdatedReceiver : BroadcastReceiver() {
+    override fun onReceive(context: Context, intent: Intent) {
+        if (intent.action != Intent.ACTION_MY_PACKAGE_REPLACED) return
+        val version = runCatching { context.packageManager.getPackageInfo(context.packageName, 0).versionName }.getOrNull() ?: ""
+        val nm = context.getSystemService(android.app.NotificationManager::class.java) ?: return
+        if (Build.VERSION.SDK_INT >= 26) {
+            nm.createNotificationChannel(
+                android.app.NotificationChannel(CHANNEL, "Updates", android.app.NotificationManager.IMPORTANCE_DEFAULT)
+                    .apply { description = "When the game has updated itself" },
+            )
+        }
+        val open = PendingIntent.getActivity(
+            context, 1, Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+            PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+        )
+        val n = androidx.core.app.NotificationCompat.Builder(context, CHANNEL)
+            .setSmallIcon(R.drawable.ic_stat_flame)
+            .setContentTitle("Refiner's Fire updated")
+            .setContentText(if (version.isNotEmpty()) "Version $version is ready. Tap to play." else "Tap to play.")
+            .setAutoCancel(true)
+            .setContentIntent(open)
+            .build()
+        runCatching { nm.notify(UPDATED_ID, n) } // Without the notification permission there's simply no notice.
+    }
+
+    companion object {
+        const val CHANNEL = "updates"
+        const val UPDATED_ID = 4242
     }
 }

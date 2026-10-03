@@ -58,10 +58,18 @@ enum class Difficulty(val displayName: String, val startBoard: Int, val scoreMul
 }
 
 @Serializable
-enum class GameMode(val displayName: String, val scoreMultiplier: Int) {
-    STRATEGIC("Strategic", 1),
-    TIME_TRIAL("Time Trial", 2),
+enum class GameMode(val displayName: String, val scoreMultiplier: Int, val blurb: String) {
+    STRATEGIC("Strategic", 1, "No clock. Take all the time you need."),
+    TIME_TRIAL("Time Trial", 2, "Place each stone before the hourglass runs out. Scores x2."),
+    /** The forge holds a single level: one bad discard too many ends the game. */
+    IRON_FORGE("Iron Forge", 3, "The forge holds just one level, so a second discard ends it. Scores x3."),
+    /** The next three stones are shown, so placements can be planned. */
+    FORESIGHT("Foresight", 1, "See the next three stones coming and plan ahead."),
 }
+
+/** Why a forge level is lit, so the forge can show each cause in its own colour. */
+@Serializable
+enum class ForgeSource { DISCARD, MISS, HINT, STOKE }
 
 /** How many glyphs and colours can appear on a given board. */
 data class BoardConfig(val glyphs: Int, val colors: Int) {

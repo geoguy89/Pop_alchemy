@@ -58,7 +58,7 @@ private fun discardPulse(vm: GameViewModel): Float = if (vm.noMoves) 0.5f + 0.5f
 /** Paid hint: shows the legal squares for the current stone, once per stone. */
 @Composable
 private fun HintButton(vm: GameViewModel, modifier: Modifier) {
-    SmallBrass("Hint", vm::useHint, modifier, enabled = vm.hintAvailable)
+    SmallBrass(vm.hintLabel, vm::useHint, modifier, enabled = vm.hintAvailable)
 }
 
 @Composable
@@ -91,6 +91,7 @@ private fun WideLayout(vm: GameViewModel, state: GameState, panelWidth: Dp, gap:
                     HandSlot(vm, state, Modifier.weight(1f), showLabel = !short)
                     Forge(vm, state, Modifier.weight(0.8f), showLabel = !short)
                 }
+                NextStrip(vm, Modifier.fillMaxWidth())
                 BrassButton("Discard!", vm::discard, Modifier.fillMaxWidth(), pulse = discardPulse(vm))
                 HintButton(vm, Modifier.fillMaxWidth())
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -131,7 +132,9 @@ private fun TallLayout(vm: GameViewModel, state: GameState) {
         }
         Spacer(Modifier.weight(0.6f))
         BoardView(vm, Modifier.fillMaxWidth().aspectRatio(BoardGeom.ASPECT))
-        Spacer(Modifier.weight(0.4f))
+        Spacer(Modifier.weight(0.2f))
+        NextStrip(vm, Modifier.fillMaxWidth().padding(vertical = 4.dp))
+        Spacer(Modifier.weight(0.2f))
         BoxWithConstraints(Modifier.fillMaxWidth().padding(horizontal = 8.dp)) {
             val instrument = min(maxWidth * 0.34f, 170.dp)
             val buttonsW = maxWidth * 0.3f
@@ -174,6 +177,7 @@ private fun TabletopLayout(vm: GameViewModel, state: GameState, hingeY: Dp, hing
             HandSlot(vm, state, Modifier.heightIn(max = 230.dp).fillMaxHeight().aspectRatio(0.8f))
             Forge(vm, state, Modifier.heightIn(max = 230.dp).fillMaxHeight().aspectRatio(0.65f))
             Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.width(150.dp)) {
+                NextStrip(vm, Modifier.fillMaxWidth())
                 BrassButton("Discard!", vm::discard, Modifier.fillMaxWidth(), pulse = discardPulse(vm))
                 HintButton(vm, Modifier.fillMaxWidth())
                 SmallBrass("Menu", { vm.push(Overlay.Pause) }, Modifier.fillMaxWidth())

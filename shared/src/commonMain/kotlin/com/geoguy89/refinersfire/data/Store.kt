@@ -89,17 +89,40 @@ class Store(private val prefs: KeyValueStore) {
 
     fun loadHighScores(): List<HighScore> = decode("scores", ListSerializer(HighScore.serializer())) ?: emptyList()
 
-    /** Adds the score if it makes the table; returns its position (0-based) or -1. */
+    /**
+     * Adds the score if it makes its table (the top [MAX_SCORES] for its difficulty and mode), and keeps it as this
+     * week's best for that table if it is. Returns its position in its table (0-based) or -1.
+     */
     fun addHighScore(entry: HighScore): Int {
-        val list = (loadHighScores() + entry).sortedByDescending { it.score }.take(MAX_SCORES)
+        val list = (loadHighScores() + entry)
+            .groupBy { it.difficulty to it.mode }.values
+            .flatMap { table -> table.sortedByDescending { it.score }.take(MAX_SCORES) }
+            .sortedByDescending { it.score }
         prefs.put("scores", json.encodeToString(ListSerializer(HighScore.serializer()), list))
-        return list.indexOf(entry)
+        val week = loadWeekScores().filter { it.difficulty != entry.difficulty || it.mode != entry.mode || it.score >= entry.score }
+        val bestThisWeek = week.none { it.difficulty == entry.difficulty && it.mode == entry.mode }
+        prefs.put("weekScores", json.encodeToString(ListSerializer(HighScore.serializer()), if (bestThisWeek) week + entry else week))
+        return list.filter { it.difficulty == entry.difficulty && it.mode == entry.mode }.indexOf(entry)
     }
 
-    fun qualifies(score: Long): Boolean {
-        val list = loadHighScores()
-        return score > 0 && (list.size < MAX_SCORES || score > list.last().score)
+    /** Whether [score] would make its table, or beat this week's best in it. */
+    fun qualifies(score: Long, difficulty: Difficulty, mode: GameMode): Boolean {
+        if (score <= 0) return false
+        val table = loadHighScores().filter { it.difficulty == difficulty && it.mode == mode }
+        val weekBest = loadWeekScores().firstOrNull { it.difficulty == difficulty && it.mode == mode }?.score ?: 0
+        return table.size < MAX_SCORES || score > table.minOf { it.score } || score > weekBest
     }
+
+    /** This week's best score in each table (weeks start Monday 00:00 UTC). */
+    fun loadWeekScores(now: Long = com.geoguy89.refinersfire.epochMillis()): List<HighScore> {
+        val start = weekStart(now)
+        return (decode("weekScores", ListSerializer(HighScore.serializer())) ?: emptyList()).filter { it.epochMillis >= start }
+    }
+
+    /** What goes to the server: the best five in each table, plus this week's best in each. */
+    fun scoresForUpload(): List<HighScore> =
+        (loadHighScores().groupBy { it.difficulty to it.mode }.values.flatMap { t -> t.sortedByDescending { it.score }.take(5) } + loadWeekScores())
+            .distinctBy { Triple(it.name, it.score, it.epochMillis) }
 
     /** Random id for this install, used to tell our own broadcasts from other devices'. */
     fun deviceId(): String = prefs.get("deviceId") ?: buildString {
@@ -202,5 +225,9 @@ class Store(private val prefs: KeyValueStore) {
         const val MAX_SCORES = 10
         const val MAX_PEERS = 50
         const val MAX_CHAT_LINES = 200
+        private const val DAY_MS = 86_400_000L
+
+        /** Monday 00:00 UTC of the week containing [t] (1 January 1970 was a Thursday). Matches the server. */
+        fun weekStart(t: Long): Long = ((t.floorDiv(DAY_MS) + 3).floorDiv(7L) * 7 - 3) * DAY_MS
     }
 }

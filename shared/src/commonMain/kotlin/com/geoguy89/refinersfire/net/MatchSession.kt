@@ -5,6 +5,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.geoguy89.refinersfire.game.COLS
 import com.geoguy89.refinersfire.game.Difficulty
+import com.geoguy89.refinersfire.game.GameMode
 import com.geoguy89.refinersfire.game.GameState
 import com.geoguy89.refinersfire.game.Glyph
 import com.geoguy89.refinersfire.game.Piece
@@ -49,6 +50,7 @@ private data class ServerMsg(
     val t: String,
     val seed: Long? = null,
     val difficulty: Difficulty? = null,
+    val mode: GameMode? = null,
     val goalType: String? = null,
     val goalValue: Int? = null,
     val cleared: Int? = null,
@@ -97,7 +99,7 @@ class MatchSession(
     private val post: (() -> Unit) -> Unit,
     private val now: () -> Float,
     /** Seed and difficulty arrive with "start" (or "resume"); the view model builds the engine from them. */
-    private val onStart: (seed: Long, difficulty: Difficulty, resume: Boolean) -> Unit,
+    private val onStart: (seed: Long, difficulty: Difficulty, mode: GameMode, resume: Boolean) -> Unit,
     /** The opponent just cleared a board: their new board number and score. */
     private val onOpponentCleared: (board: Int, score: Long) -> Unit = { _, _ -> },
     /** Stoke Duel: the opponent cleared a line and stoked us [levels] times. */
@@ -115,6 +117,10 @@ class MatchSession(
         private set
     var difficulty by mutableStateOf(Difficulty.EASY)
         private set
+    /** Strategic, Iron Forge or Foresight: both players play the same. */
+    var mode by mutableStateOf(GameMode.STRATEGIC)
+        private set
+    val forgeCapacity: Int get() = if (mode == GameMode.IRON_FORGE) 1 else com.geoguy89.refinersfire.game.FORGE_CAPACITY
     /** Local clock times (seconds) when play starts and when the match ends. */
     var startsAt by mutableStateOf(0f)
         private set
@@ -178,6 +184,7 @@ class MatchSession(
             "start", "resume" -> {
                 opponent = m.opponent ?: opponent
                 difficulty = m.difficulty ?: difficulty
+                mode = m.mode ?: mode
                 if (m.goalType != null) goal = MatchGoal(m.goalType, m.goalValue ?: goal.value)
                 val startIn = (m.startInMs ?: 0) / 1000f
                 val remaining = (m.remainingMs ?: m.durationMs ?: 0) / 1000f
@@ -187,7 +194,7 @@ class MatchSession(
                 forfeitAt = null
                 if (!started) {
                     started = true
-                    onStart(m.seed ?: 0, difficulty, m.t == "resume")
+                    onStart(m.seed ?: 0, difficulty, mode, m.t == "resume")
                 }
                 phase = if (m.you?.over == true) MatchPhase.OUT else if (startIn > 0) MatchPhase.COUNTDOWN else MatchPhase.PLAYING
                 // A resumed connection may have missed our last move.

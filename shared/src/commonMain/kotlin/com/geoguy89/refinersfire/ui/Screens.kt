@@ -137,7 +137,7 @@ fun OverlayHost(vm: GameViewModel) {
         null -> Unit
         Overlay.NewGame -> NewGamePanel(vm)
         Overlay.Options -> OptionsPanel(vm)
-        Overlay.HighScores -> HighScoresPanel(vm)
+        Overlay.HighScores -> HallOfFamePanel(vm)
         Overlay.HowToPlay -> HowToPlayPanel(vm)
         Overlay.Pause -> PausePanel(vm)
         Overlay.ConfirmAbandonMatch -> GamePanel("Abandon Match?", vm::pop) {
@@ -196,11 +196,8 @@ private fun NewGamePanel(vm: GameViewModel) {
             style = bodyStyle(13.sp, Palette.parchment.copy(alpha = 0.75f)),
         )
         Text("Choose Your Game Mode", style = bodyStyle(15.sp, Palette.goldLight, bold = true))
-        Choice(GameMode.entries, mode, { it.displayName }) { vm.click(); mode = it }
-        Text(
-            if (mode == GameMode.STRATEGIC) "Take all the time you need." else "Place each stone before the hourglass runs dry, or it's cast into the forge. All points are doubled.",
-            style = bodyStyle(13.sp, Palette.parchment.copy(alpha = 0.75f)), textAlign = TextAlign.Center,
-        )
+        for (pair in GameMode.entries.chunked(2)) Choice(pair, mode, { it.displayName }) { vm.click(); mode = it }
+        Text(mode.blurb, style = bodyStyle(13.sp, Palette.parchment.copy(alpha = 0.75f)), textAlign = TextAlign.Center)
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.padding(top = 6.dp)) {
             BrassButton("Tutorial", { vm.push(Overlay.HowToPlay) }, Modifier.weight(1f), dark = true)
             BrassButton("Play!", { vm.startNewGame(difficulty, mode) }, Modifier.weight(1f))
@@ -299,70 +296,6 @@ private fun OptionSwitch(label: String, checked: Boolean, colors: androidx.compo
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Text(label, style = bodyStyle(15.sp, bold = true), modifier = Modifier.weight(1f))
         Switch(checked, onChange, colors = colors)
-    }
-}
-
-@Composable
-private fun HighScoresPanel(vm: GameViewModel) {
-    var tab by rememberSaveable { mutableStateOf(HallTab.GLOBAL) }
-    var difficulty by rememberSaveable { mutableStateOf<Difficulty?>(null) }
-    GamePanel("Hall of Fame", vm::pop, maxWidth = 660.dp) {
-        Choice(HallTab.entries, tab, { it.label }) { vm.click(); tab = it; if (it == HallTab.GLOBAL) vm.online.fetchLeaderboard() }
-        val difficultyChoices = listOf<Difficulty?>(null) + Difficulty.entries
-        Choice(difficultyChoices, difficulty, { it?.displayName ?: "All Levels" }) { vm.click(); difficulty = it }
-        val rows = vm.hallRows(tab, difficulty)
-        if (rows.isEmpty()) {
-            Text(
-                when {
-                    difficulty != null -> "No scores yet on ${difficulty!!.displayName}. Try a different level, or play one!"
-                    tab == HallTab.GLOBAL -> if (vm.online.reachable) "No one is on the Global board yet. Set Share Scores to Global in Options to put yours up." else "Can't reach the game server right now."
-                    tab == HallTab.FRIENDS -> "Add friends from Friends & 1v1 to see their best here."
-                    tab == HallTab.NEARBY -> "Nobody nearby yet. Scores appear when someone plays on the same Wi-Fi."
-                    else -> "No names are yet inscribed here.\nWill yours be the first?"
-                },
-                style = bodyStyle(), textAlign = TextAlign.Center,
-            )
-        }
-        rows.forEachIndexed { i, row ->
-            val h = row.score
-            // On the Global board, tap a player for their card: add them, or challenge them.
-            val entry = if (tab == HallTab.GLOBAL) vm.online.leaderboard.firstOrNull { it.playerId == row.playerId } else null
-            Row(
-                Modifier.fillMaxWidth().then(if (entry != null) Modifier.clickable { vm.click(); vm.push(Overlay.PlayerCard(entry)) } else Modifier),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text("${i + 1}.", style = bodyStyle(16.sp, Palette.goldLight, bold = true), modifier = Modifier.width(38.dp))
-                Column(Modifier.weight(1f)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        val friend = vm.isFriend(row.playerId)
-                        if (friend) {
-                            FriendBadge(Modifier.size(16.dp))
-                            Spacer(Modifier.width(6.dp))
-                        }
-                        Text(h.name, style = bodyStyle(16.sp, bold = true), maxLines = 1, modifier = Modifier.weight(1f, fill = false))
-                        val tag = if (row.isMe && tab != HallTab.MINE) "you" else row.tag?.takeIf { !friend }
-                        if (tag != null) Text("  · $tag", style = bodyStyle(11.sp, Palette.hint, bold = true), maxLines = 1)
-                    }
-                    Text(
-                        "${Ranks.rankFor(h.score)} · Board ${h.board} · ${h.difficulty.displayName} ${h.mode.displayName} · ${formatDate(h.epochMillis)}",
-                        style = bodyStyle(11.sp, Palette.parchment.copy(alpha = 0.7f)), maxLines = 2,
-                    )
-                }
-                if (entry == null && vm.canBefriend(row)) {
-                    BrassButton("+ Friend", { vm.addFriend(row.playerId!!) }, Modifier.width(92.dp), dark = true, fontSize = 12.sp, minHeight = 32.dp)
-                    Spacer(Modifier.width(8.dp))
-                }
-                Text("${h.score}", style = bodyStyle(18.sp, Palette.ledOrange, bold = true))
-            }
-        }
-        if (tab == HallTab.NEARBY && vm.peers.any { it.direct }) {
-            val n = vm.peers.count { it.direct }
-            Text("Scores from $n nearby ${if (n == 1) "device" else "devices"}.", style = bodyStyle(12.sp, Palette.parchment.copy(alpha = 0.6f)), textAlign = TextAlign.Center)
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            if (tab == HallTab.NEARBY && vm.peers.isNotEmpty()) BrassButton("Forget Nearby", vm::forgetNearbyScores, Modifier.weight(1f), dark = true, fontSize = 14.sp)
-            BrassButton("Close", vm::pop, Modifier.weight(1f))
-        }
     }
 }
 
@@ -486,8 +419,9 @@ private fun UpdatePanel(vm: GameViewModel) {
     GamePanel("Update Available", if (progress == null) vm::pop else null) {
         Text("Refiner's Fire ${info.version} (build ${info.build}) is available.", style = bodyStyle(16.sp, Palette.goldLight, bold = true), textAlign = TextAlign.Center)
         Text(
-            "Your scores, friends and achievements are kept. Android will ask you to confirm the install" +
-                " (the first time, it may ask you to allow installs from Refiner's Fire).",
+            "Your scores, friends and achievements are kept. The game downloads the update, installs it and closes;" +
+                " tap the \"updated\" notification (or the app icon) to carry on. The very first time, Android asks" +
+                " you to allow installs from Refiner's Fire.",
             style = bodyStyle(13.sp, Palette.parchment.copy(alpha = 0.8f)), textAlign = TextAlign.Center,
         )
         if (progress != null) {
@@ -574,7 +508,7 @@ private val helpPages = listOf(
     ) { d, t -> d.strip(listOf(redLapis, redLapis, redLapis, redLapis, redLapis), List(5) { false }, t) },
     HelpPage(
         "Hints & Penalties",
-        "Stuck? The Hint button lights up every square the stone can go, but stokes the forge: one level for the first hint on a board, two for the second, and it can't cool below one until that board is cleared. Two hints per board at most. Melting a stone in the forge costs points. Every 10 stones placed without a discard is a streak; throwing away the Hammer doesn't break it and costs no points. Rise from Dross to Pure Gold!",
+        "Stuck? The Hint button lights up every square the stone can go, but stokes the forge (in green): one level for the first hint on a board, two for the second, and it can't cool below one until that board is cleared. You get two hints per board and the button counts them down; tapping squares to guess also stokes it (in violet) on every second wrong try. Melting a stone in the forge costs points. Every 10 stones placed without a discard is a streak; throwing away the Hammer doesn't break it and costs no points. Rise from Dross to Pure Gold!",
     ) { d, t -> d.strip(listOf(redLapis, null, greenLapis, null), List(4) { false }, t, mapOf(1 to true, 3 to true)) },
 )
 

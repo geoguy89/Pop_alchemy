@@ -9,6 +9,7 @@ import com.geoguy89.refinersfire.audio.AudioPlayer
 import com.geoguy89.refinersfire.epochMillis
 import com.geoguy89.refinersfire.net.MannaSubmitBody
 import com.geoguy89.refinersfire.game.Manna
+import com.geoguy89.refinersfire.game.Puzzles
 import com.geoguy89.refinersfire.data.MannaResult
 import com.geoguy89.refinersfire.localDay
 import com.geoguy89.refinersfire.audio.Sfx
@@ -88,6 +89,10 @@ sealed interface Overlay {
     data object Update : Overlay
     data object Peek : Overlay
     data class AsyncSetup(val rival: Rival) : Overlay
+    /** The puzzle book. */
+    data object Puzzles : Overlay
+    /** A puzzle ended: solved (with stars) or not, and why. */
+    data class PuzzleDone(val id: Int, val solved: Boolean, val stars: Int, val reason: String) : Overlay
     /** Today's Manna: the standings, and the way in. */
     data object Manna : Overlay
     /** A Manna run just ended. */
@@ -98,6 +103,9 @@ sealed interface Overlay {
 
 /** Local = nearby only, own scores only. Plus = Local+: pass on open scores and list yours on the global board. */
 enum class ShareMode(val label: String) { PLUS("Global"), LOCAL("Local"), HIDDEN("Hide Activity") }
+
+/** Days of Manna that unlock the Starlight theme. */
+const val STARLIGHT_DAYS = 7
 
 enum class HallTab(val label: String) { GLOBAL("Global"), FRIENDS("Friends"), NEARBY("Nearby"), MINE("Mine") }
 
@@ -140,6 +148,9 @@ class GameViewModel(
     var savedManna by mutableStateOf(store.loadMannaGame())
         private set
     var mannaHistory by mutableStateOf(store.loadMannaHistory())
+        private set
+    /** Best stars per puzzle. */
+    var puzzleStars by mutableStateOf(store.loadPuzzleStars())
         private set
     private var announced = store.loadAnnounced()
     var highScores by mutableStateOf(store.loadHighScores())
@@ -493,7 +504,8 @@ class GameViewModel(
                 _haptics.tryEmit(Haptic.HEAVY)
                 // A challenge or Manna run ends when its boards are cleared.
                 val run = ev.stats.challengeId != null || ev.stats.mannaDay != null
-                if (run && ev.stats.boardsCleared >= ev.stats.challengeBoards) {
+                if (ev.stats.puzzleId != null) Unit // A puzzle judges itself after the move.
+                else if (run && ev.stats.boardsCleared >= ev.stats.challengeBoards) {
                     if (ev.stats.mannaDay != null) finishMannaRun(ev.stats) else finishChallengeRun(ev.stats)
                 } else overlays = overlays + Overlay.BoardComplete(ev)
             }
@@ -526,13 +538,15 @@ class GameViewModel(
             GameEvent.GameOver -> {
                 audio.play(Sfx.GAME_OVER)
                 // In a match you're out but the match goes on; the result comes from the server.
-                if (e.state.mannaDay != null) finishMannaRun(e.state)
+                if (e.state.puzzleId != null) Unit // Judged after the move.
+                else if (e.state.mannaDay != null) finishMannaRun(e.state)
                 else if (e.state.challengeId != null) finishChallengeRun(e.state)
                 else if (match == null) overlays = overlays + Overlay.GameOver(e.state, store.qualifies(e.state.score, e.state.difficulty, e.state.mode))
             }
         }
         state = e.state
         match?.report(e.state)
+        judgePuzzle()
         persist()
     }
 
@@ -853,6 +867,70 @@ class GameViewModel(
                 store.savePendingManna(store.loadPendingManna().filter { it.day != r.day })
                 if (r.day == today) online.fetchManna(r.day)
             }
+        }
+    }
+
+    // ---- Puzzles -----------------------------------------------------------------------------------------------------
+
+    /** Puzzles open as you go: the first three, then one more for each solved. */
+    fun puzzleUnlocked(id: Int): Boolean = id <= puzzleStars.size + 3
+
+    val totalPuzzleStars: Int get() = puzzleStars.values.sum()
+
+    fun openPuzzles() {
+        click()
+        overlays = overlays.filter { it != Overlay.Puzzles } + Overlay.Puzzles
+    }
+
+    fun startPuzzle(id: Int) {
+        if (id !in 1..Puzzles.COUNT || !puzzleUnlocked(id)) return
+        click()
+        dropFinishedMatch()
+        if (match != null) { notice = "Finish your live match first."; return }
+        persist() // Keep the single-player game safe.
+        adopt(Puzzles.get(id).start())
+        overlays = emptyList()
+        screen = Screen.GAME
+    }
+
+    fun retryPuzzle() {
+        val id = state?.puzzleId ?: (overlay as? Overlay.PuzzleDone)?.id ?: return
+        startPuzzle(id)
+    }
+
+    fun nextPuzzle() {
+        val id = (overlay as? Overlay.PuzzleDone)?.id ?: state?.puzzleId ?: return
+        if (id < Puzzles.COUNT && puzzleUnlocked(id + 1)) startPuzzle(id + 1) else leavePuzzle()
+    }
+
+    /** Back to the puzzle book. */
+    fun leavePuzzle() {
+        click()
+        engine = null
+        state = null
+        screen = Screen.TITLE
+        savedGame = store.loadGame()
+        overlays = listOf(Overlay.Puzzles)
+    }
+
+    /** After each move: solved once the lines are cleared; out of luck when the stones or the forge run out. */
+    private fun judgePuzzle() {
+        val s = engine?.state ?: return
+        val id = s.puzzleId ?: return
+        if (overlay is Overlay.PuzzleDone) return
+        when {
+            s.puzzleLines >= s.puzzleTarget -> {
+                val stars = Puzzles.stars(s.discards, s.hintsUsed)
+                val best = maxOf(puzzleStars[id] ?: 0, stars)
+                val first = id !in puzzleStars
+                puzzleStars = puzzleStars + (id to best)
+                store.savePuzzleStars(puzzleStars)
+                bump { it.copy(puzzlesSolved = puzzleStars.size, puzzleStars = puzzleStars.values.sum()) }
+                audio.play(Sfx.BOARD_CLEAR)
+                overlays = listOf(Overlay.PuzzleDone(id, true, stars, if (first) "Solved!" else "Solved again!"))
+            }
+            s.gameOver -> overlays = listOf(Overlay.PuzzleDone(id, false, 0, "The forge overflowed."))
+            s.puzzleExhausted -> overlays = listOf(Overlay.PuzzleDone(id, false, 0, "Out of stones: ${s.puzzleLines} of ${s.puzzleTarget} lines."))
         }
     }
 
@@ -1297,7 +1375,8 @@ class GameViewModel(
     val upcoming: List<Piece>
         get() {
             val s = state ?: return emptyList()
-            if (s.mode != GameMode.FORESIGHT) return emptyList()
+            // Foresight shows the next three; a puzzle shows what's left of its fixed run.
+            if (s.mode != GameMode.FORESIGHT && s.puzzleId == null) return emptyList()
             return engine?.upcoming() ?: emptyList()
         }
 
@@ -1325,6 +1404,22 @@ class GameViewModel(
     }
 
     fun setTheme(theme: ThemeId) = updateSettings(settings.copy(theme = theme))
+
+    /** Days of Manna that open the Starlight theme. */
+    val starlightDays: Int get() = STARLIGHT_DAYS
+
+    /** Starlight is earned by gathering the daily Manna on seven days; everything else is open. */
+    fun themeUnlocked(theme: ThemeId): Boolean = theme != ThemeId.STARLIGHT || maxOf(stats.mannaDays, mannaHistory.size) >= STARLIGHT_DAYS
+
+    fun chooseTheme(theme: ThemeId) {
+        click()
+        if (!themeUnlocked(theme)) {
+            val have = maxOf(stats.mannaDays, mannaHistory.size)
+            notice = "Gather the daily Manna on $STARLIGHT_DAYS days to unlock Starlight ($have of $STARLIGHT_DAYS so far)."
+            return
+        }
+        setTheme(theme)
+    }
 
     // ---- Updates ------------------------------------------------------------------------------------------------------
 
@@ -1421,6 +1516,7 @@ class GameViewModel(
 
     private fun persist() {
         val s = engine?.state ?: return
+        if (s.puzzleId != null) return // Puzzles are short: never saved over the game in progress.
         if (s.mannaDay != null) {
             store.saveMannaGame(if (s.gameOver) null else s)
             savedManna = store.loadMannaGame()

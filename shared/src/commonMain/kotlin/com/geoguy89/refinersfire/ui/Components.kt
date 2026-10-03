@@ -56,6 +56,9 @@ import com.geoguy89.refinersfire.resources.imfellenglish
 import com.geoguy89.refinersfire.resources.pirataone
 import com.geoguy89.refinersfire.resources.rajdhani_bold
 import com.geoguy89.refinersfire.resources.rajdhani_medium
+import com.geoguy89.refinersfire.resources.dellarespira
+import com.geoguy89.refinersfire.resources.marcellus
+import com.geoguy89.refinersfire.resources.uncialantiqua
 import com.geoguy89.refinersfire.gfx.Palette
 import com.geoguy89.refinersfire.gfx.drawBackdrop
 import com.geoguy89.refinersfire.gfx.drawBrassPlate
@@ -83,6 +86,14 @@ object Fonts {
             ThemeId.FUTURE to (
                 FontFamily(font(Res.font.audiowide, FontWeight.Bold), font(Res.font.audiowide, FontWeight.Normal)) to
                     FontFamily(font(Res.font.rajdhani_medium, FontWeight.Normal), font(Res.font.rajdhani_bold, FontWeight.Bold))
+                ),
+            ThemeId.GARDEN to (
+                FontFamily(font(Res.font.uncialantiqua, FontWeight.Bold), font(Res.font.uncialantiqua, FontWeight.Normal)) to
+                    FontFamily(font(Res.font.dellarespira, FontWeight.Normal), font(Res.font.dellarespira, FontWeight.Bold))
+                ),
+            ThemeId.STARLIGHT to (
+                FontFamily(font(Res.font.marcellus, FontWeight.Bold), font(Res.font.marcellus, FontWeight.Normal)) to
+                    FontFamily(font(Res.font.marcellus, FontWeight.Normal), font(Res.font.marcellus, FontWeight.Bold))
                 ),
         )
         content()

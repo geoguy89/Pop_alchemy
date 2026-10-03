@@ -201,6 +201,11 @@ class Store(private val prefs: KeyValueStore) {
     fun loadChallengeGame(): GameState? = decode("challengeGame", GameState.serializer())
     fun saveChallengeGame(s: GameState?) = prefs.put("challengeGame", s?.let { json.encodeToString(GameState.serializer(), it) })
 
+    /** Best stars earned on each puzzle (1-3), by puzzle number. */
+    fun loadPuzzleStars(): Map<Int, Int> = decode("puzzleStars", puzzleSerializer) ?: emptyMap()
+    fun savePuzzleStars(m: Map<Int, Int>) = prefs.put("puzzleStars", json.encodeToString(puzzleSerializer, m))
+    private val puzzleSerializer = kotlinx.serialization.builtins.MapSerializer(Int.serializer(), Int.serializer())
+
     /** Today's Manna in progress (kept apart from the single-player save). */
     fun loadMannaGame(): GameState? = decode("mannaGame", GameState.serializer())
     fun saveMannaGame(s: GameState?) = prefs.put("mannaGame", s?.let { json.encodeToString(GameState.serializer(), it) })

@@ -39,7 +39,14 @@ class OnlineFeaturesTest {
         throw AssertionError("timed out: $what")
     }
 
+    /** Let pop-ups (notices, achievement banners) clear before a picture. */
+    private fun quiet(vm: GameViewModel) {
+        repeat(240) { clock += 50_000_000L; vm.onFrame(clock) }
+        vm.dismissNotice()
+    }
+
     private fun shot(vm: GameViewModel, name: String) {
+        quiet(vm)
         androidx.compose.ui.ImageComposeScene(824, 1830, androidx.compose.ui.unit.Density(2f)) {
             com.geoguy89.refinersfire.ui.RefinersFireApp(vm)
         }.use { scene ->

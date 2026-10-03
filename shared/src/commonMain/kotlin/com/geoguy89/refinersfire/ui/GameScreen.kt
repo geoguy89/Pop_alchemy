@@ -190,6 +190,7 @@ private fun TabletopLayout(vm: GameViewModel, state: GameState, hingeY: Dp, hing
 
 @Composable
 private fun ModeLabel(state: GameState) {
+    if (state.puzzleId != null) { PuzzleLabel(state); return }
     Text(
         "${state.difficulty.displayName} · ${state.mode.displayName}",
         style = bodyStyle(12.sp, Palette.parchment.copy(alpha = 0.8f), bold = true),

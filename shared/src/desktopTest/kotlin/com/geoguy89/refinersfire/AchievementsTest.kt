@@ -16,10 +16,10 @@ import org.junit.Test
 
 class AchievementsTest {
     @Test
-    fun between100And200WithUniqueIdsAndNames() {
+    fun between100And250WithUniqueIdsAndNames() {
         val all = Achievements.all
         println("Achievements: ${all.size}")
-        assertTrue(all.size in 100..200)
+        assertTrue(all.size in 100..250)
         assertEquals(all.size, all.map { it.id }.toSet().size)
         assertEquals("names are unique", all.size, all.map { it.name }.toSet().size)
         assertTrue("nothing unlocked on a fresh install", Achievements.newlyUnlocked(LifetimeStats(), emptySet()).isEmpty())

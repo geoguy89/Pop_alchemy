@@ -178,6 +178,26 @@ private fun DrawScope.drawFrame(g: BoardGeom, s: GameState, t: Float, tm: TextMe
             drawRoundRect(Palette.brass, tl, sz, CornerRadius(f * 0.6f), alpha = 0.18f * pulse, style = Stroke(f * 0.35f))
             drawRoundRect(Palette.brass, tl, sz, CornerRadius(f * 0.6f), alpha = pulse, style = Stroke(2f))
         }
+        ThemeId.GARDEN -> {
+            // Little olive sprigs on the corners.
+            for (corner in listOf(tl, tl + Offset(sz.width, 0f), tl + Offset(0f, sz.height), tl + Offset(sz.width, sz.height))) {
+                val dir = Offset(if (corner.x > g.origin.x) -1f else 1f, if (corner.y > g.origin.y) -1f else 1f)
+                val c = corner + Offset(dir.x * f * 0.5f, dir.y * f * 0.5f)
+                for (k in 0 until 3) {
+                    val a = Offset(dir.x * f * (0.5f + 0.45f * k), dir.y * f * (0.2f + 0.2f * k))
+                    drawOval(Color(0xFF4E6A32), c + a - Offset(f * 0.22f, f * 0.1f), Size(f * 0.44f, f * 0.2f))
+                }
+            }
+        }
+        ThemeId.STARLIGHT -> {
+            // Stars twinkle along the frame.
+            for (k in 0 until 14) {
+                val along = (k + 0.5f) / 14f
+                val p = if (k % 2 == 0) Offset(tl.x + sz.width * along, tl.y + f * 0.18f) else Offset(tl.x + sz.width * along, tl.y + sz.height - f * 0.18f)
+                val tw = 0.4f + 0.6f * (0.5f + 0.5f * sin(t * (1.3f + k * 0.17f) + k))
+                drawCircle(Color.White, f * 0.07f, p, alpha = tw)
+            }
+        }
         ThemeId.MODERN -> Unit
     }
     // Carved inner lip.

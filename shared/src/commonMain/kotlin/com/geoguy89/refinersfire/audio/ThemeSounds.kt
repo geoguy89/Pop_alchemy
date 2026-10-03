@@ -92,6 +92,122 @@ object ThemeSounds {
         }
     }
 
+    /** Garden: placements are soft wooden taps and a lyre note; a cleared line is a rising run on the lyre. */
+    fun garden(sfx: Sfx): FloatArray? {
+        val s = Synth(SoundDesigns.SFX_RATE)
+        return when (sfx) {
+            Sfx.PLACE_0, Sfx.PLACE_1, Sfx.PLACE_2, Sfx.PLACE_3, Sfx.PLACE_4 -> {
+                val k = sfx.ordinal - Sfx.PLACE_0.ordinal
+                val b = s.buffer(0.9f)
+                s.noise(b, 0f, 0.05f, 0.25f, 900.0, 400.0)
+                s.tone(b, 0f, 220.0, 150.0, 0.06f, 0.35f, Wave.TRIANGLE, attack = 0.001f, release = 0.04f)
+                s.pluck(b, 0.01f, s.midi(gardenNotes[k]), 0.8f, 0.4f, damping = 0.995f, bright = 0.45f)
+                s.normalize(s.reverb(b, 0.25f, 0.8f), 0.75f)
+            }
+            Sfx.LINE_CLEAR, Sfx.MULTI_LINE -> {
+                val big = sfx == Sfx.MULTI_LINE
+                val b = s.buffer(if (big) 2.4f else 1.8f)
+                val notes = if (big) doubleArrayOf(67.0, 71.0, 74.0, 79.0, 83.0, 86.0, 91.0) else doubleArrayOf(67.0, 71.0, 74.0, 79.0, 83.0)
+                notes.forEachIndexed { i, n ->
+                    s.pluck(b, i * 0.07f, s.midi(n), 1.2f, 0.28f, damping = 0.996f, bright = 0.5f)
+                }
+                s.tone(b, 0.05f, s.midi(79.0), s.midi(79.0), 1.2f, 0.06f, Wave.SINE, attack = 0.05f, release = 0.9f, vibrato = 0.012)
+                s.normalize(s.reverb(b, 0.45f, 0.88f), 0.85f)
+            }
+            else -> null
+        }
+    }
+
+    private val gardenNotes = doubleArrayOf(67.0, 69.0, 71.0, 74.0, 76.0)
+
+    /**
+     * Garden: a pastoral piece in G major. Lyre arpeggios, a breathy flute melody on the pentatonic scale, a soft hand
+     * drum and birdsong now and then.
+     */
+    fun gardenMusic(): FloatArray {
+        val rate = MusicComposer.RATE
+        val s = Synth(rate)
+        val beat = 60f / 80f
+        val bar = beat * 4
+        val progression = listOf("G", "D", "Em", "C", "G", "C", "D", "G", "Em", "C", "G", "D", "C", "D", "G", "G")
+        val chords = mapOf(
+            "G" to intArrayOf(55, 59, 62), "D" to intArrayOf(50, 54, 57), "Em" to intArrayOf(52, 55, 59), "C" to intArrayOf(48, 52, 55),
+        )
+        val pentatonic = intArrayOf(67, 69, 71, 74, 76, 79, 81, 83)
+        val loopSeconds = bar * progression.size
+        val b = s.buffer(loopSeconds + 5f)
+        val rnd = Random(3316)
+        var note = 3
+        progression.forEachIndexed { i, name ->
+            val t0 = i * bar
+            val ch = chords.getValue(name)
+            s.tone(b, t0, s.midi(ch[0] - 12.0), s.midi(ch[0] - 12.0), bar, 0.12f, attack = 0.1f, release = 1.2f)
+            for (n in ch) s.tone(b, t0, s.midi(n.toDouble()), s.midi(n.toDouble()), bar + 0.6f, 0.018f, Wave.TRIANGLE, attack = 0.9f, release = 1.2f)
+            // Lyre: eighth-note arpeggio.
+            val arp = intArrayOf(ch[0], ch[1], ch[2], ch[0] + 12, ch[2], ch[1], ch[2], ch[1] + 12)
+            for (k in 0 until 8) {
+                if (k > 0 && rnd.nextFloat() < 0.12f) continue
+                s.pluck(b, t0 + k * beat / 2, s.midi(arp[k] + 12.0), beat * 1.8f, 0.11f + rnd.nextFloat() * 0.04f, damping = 0.9965f, bright = 0.42f)
+            }
+            // Flute: a stepwise wander on the pentatonic scale, resting every fourth bar.
+            if (i % 4 != 3) {
+                for (k in 0 until 4) {
+                    if (rnd.nextFloat() < 0.25f) continue
+                    note = (note + rnd.nextInt(3) - 1).coerceIn(0, pentatonic.lastIndex)
+                    val f = s.midi(pentatonic[note].toDouble())
+                    s.tone(b, t0 + k * beat, f, f, beat * 0.95f, 0.05f, Wave.SINE, attack = 0.06f, release = 0.25f, vibrato = 0.01)
+                    s.noise(b, t0 + k * beat, beat * 0.4f, 0.006f, 3000.0, 6000.0, attack = 0.04f, decay = 0.3f, highpass = true)
+                }
+            }
+            // Hand drum on beats one and three.
+            for (k in listOf(0, 2)) s.tone(b, t0 + k * beat, 140.0, 70.0, 0.18f, 0.18f, attack = 0.002f, release = 0.12f)
+            // A bird, now and then.
+            if (rnd.nextFloat() < 0.35f) {
+                val at = t0 + rnd.nextFloat() * bar
+                val f = 2600.0 + rnd.nextDouble() * 1200.0
+                for (c in 0 until 3) s.tone(b, at + c * 0.09f, f, f * 1.25, 0.06f, 0.025f, Wave.SINE, attack = 0.005f, release = 0.04f)
+            }
+        }
+        val wet = s.reverb(lowpass(b, 5200.0, rate), 0.4f, 0.84f, 0.35f)
+        return s.normalize(MusicComposer.foldLoop(wet, loopSeconds), 0.7f)
+    }
+
+    /**
+     * Starlight: slow and spacious, in E major. Long shimmering pads, a low drone, and bells that come out one at a time
+     * like stars.
+     */
+    fun starlightMusic(): FloatArray {
+        val rate = MusicComposer.RATE
+        val s = Synth(rate)
+        val beat = 60f / 56f
+        val bar = beat * 4
+        val progression = listOf("E", "E", "C#m", "C#m", "A", "A", "B", "B", "E", "G#m", "A", "B", "C#m", "A", "B", "E")
+        val chords = mapOf(
+            "E" to intArrayOf(52, 56, 59), "C#m" to intArrayOf(49, 52, 56), "A" to intArrayOf(45, 49, 52),
+            "B" to intArrayOf(47, 51, 54), "G#m" to intArrayOf(44, 47, 51),
+        )
+        val stars = intArrayOf(76, 78, 80, 83, 85, 88, 90, 92)
+        val loopSeconds = bar * progression.size
+        val b = s.buffer(loopSeconds + 7f)
+        val rnd = Random(1515)
+        progression.forEachIndexed { i, name ->
+            val t0 = i * bar
+            val ch = chords.getValue(name)
+            s.tone(b, t0, s.midi(40.0), s.midi(40.0), bar + 1.5f, 0.05f, Wave.SINE, attack = 1.5f, release = 2f)
+            for (n in ch) for (d in doubleArrayOf(-0.08, 0.0, 0.09)) {
+                s.tone(b, t0, s.midi(n + 12 + d), s.midi(n + 12 + d), bar + 1.5f, 0.016f, Wave.SAW, attack = 1.8f, release = 2f, vibrato = 0.003)
+            }
+            // Stars: two or three bell tones a bar, scattered in time.
+            repeat(2 + rnd.nextInt(2)) {
+                val at = t0 + rnd.nextFloat() * bar
+                val n = stars[rnd.nextInt(stars.size)]
+                s.bell(b, at, s.midi(n.toDouble()), 3.5f, 0.05f + rnd.nextFloat() * 0.03f, bright = 0.7f)
+            }
+        }
+        val wet = s.reverb(lowpass(b, 3600.0, rate), 0.7f, 0.93f, 0.3f)
+        return s.normalize(MusicComposer.foldLoop(wet, loopSeconds), 0.68f)
+    }
+
     /** A slow, cavernous piece in D minor: drone, lute, a distant bell and dripping water. */
     fun templeMusic(): FloatArray {
         val rate = MusicComposer.RATE

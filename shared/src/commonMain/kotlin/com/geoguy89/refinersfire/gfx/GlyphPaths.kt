@@ -79,12 +79,30 @@ object GlyphPaths {
         Glyph.JASPER to ("Arrow" to "M50 84 L50 16 M26 40 L50 16 L74 40 M26 88 L74 88"),
     )
 
+    /** Garden theme: plants of Scripture, each a distinct silhouette. */
+    private val plants: Map<Glyph, Pair<String, String>> = mapOf(
+        Glyph.CARNELIAN to ("Pomegranate" to "M50 34 C30 34 18 50 20 66 C22 84 38 92 50 92 C62 92 78 84 80 66 C82 50 70 34 50 34 Z M38 34 L34 16 L44 24 L50 12 L56 24 L66 16 L62 34"),
+        Glyph.EMERALD to ("Fig" to "M50 18 C50 12 54 8 60 6 M50 18 C30 30 22 56 30 74 C36 88 64 88 70 74 C78 56 70 30 50 18 Z M42 70 L46 64 M56 72 L58 64"),
+        Glyph.TURQUOISE to ("Grapes" to "M30 34 A8 8 0 1 0 46 34 A8 8 0 1 0 30 34 M46 34 A8 8 0 1 0 62 34 A8 8 0 1 0 46 34 M62 34 A8 8 0 1 0 78 34 A8 8 0 1 0 62 34 M38 50 A8 8 0 1 0 54 50 A8 8 0 1 0 38 50 M54 50 A8 8 0 1 0 70 50 A8 8 0 1 0 54 50 M46 66 A8 8 0 1 0 62 66 A8 8 0 1 0 46 66 M54 26 L56 10 M56 14 C64 6 76 8 80 16"),
+        Glyph.LAPIS to ("Lily" to "M50 92 L50 58 M32 22 L32 40 C32 52 40 58 50 58 C60 58 68 52 68 40 L68 22 L59 32 L50 18 L41 32 Z M50 76 C42 68 30 68 24 74 M50 82 C58 74 70 74 76 80"),
+        Glyph.JACINTH to ("Barley" to "M50 94 L50 32 M50 40 L38 30 M50 40 L62 30 M50 54 L36 44 M50 54 L64 44 M50 68 L38 58 M50 68 L62 58 M50 32 L50 8 M38 30 L30 14 M62 30 L70 14"),
+        Glyph.PERIDOT to ("Almond Blossom" to "M37 28 A13 13 0 1 0 63 28 A13 13 0 1 0 37 28 M58 43 A13 13 0 1 0 84 43 A13 13 0 1 0 58 43 M50 68 A13 13 0 1 0 76 68 A13 13 0 1 0 50 68 M24 68 A13 13 0 1 0 50 68 A13 13 0 1 0 24 68 M16 43 A13 13 0 1 0 42 43 A13 13 0 1 0 16 43 M44 50 A6 6 0 1 0 56 50 A6 6 0 1 0 44 50"),
+        Glyph.MOONSTONE to ("Palm" to "M46 94 C50 74 52 54 50 38 M50 38 C40 26 26 24 14 30 M50 38 C42 22 44 12 50 6 M50 38 C60 24 74 22 86 30 M50 38 C36 40 26 50 22 62 M50 38 C64 40 74 50 78 62"),
+        Glyph.AGATE to ("Cedar" to "M50 8 L66 32 L58 32 L74 54 L62 54 L80 78 L20 78 L38 54 L26 54 L42 32 L34 32 Z M50 78 L50 94"),
+        Glyph.AMETHYST to ("Vine" to "M10 60 C26 40 42 80 58 60 C70 44 82 50 90 40 M26 50 C18 40 22 28 32 26 C36 36 34 46 26 50 M58 60 C66 70 64 82 54 86 C50 76 52 66 58 60 M82 46 C86 54 82 62 74 62"),
+        Glyph.BERYL to ("Hyssop" to "M50 94 L50 34 M44 28 A6 6 0 1 0 56 28 A6 6 0 1 0 44 28 M50 52 L36 42 M30 40 A6 6 0 1 0 42 40 A6 6 0 1 0 30 40 M50 60 L64 48 M58 46 A6 6 0 1 0 70 46 A6 6 0 1 0 58 46 M50 74 L38 66 M50 80 L62 72"),
+        Glyph.ONYX to ("Rose of Sharon" to "M50 50 C56 46 58 54 52 58 C42 62 38 50 44 42 C52 32 68 40 66 54 C64 70 44 74 34 64 C22 52 30 30 48 26 C68 22 82 40 78 58 M40 76 L34 92 M60 76 L66 92"),
+        Glyph.JASPER to ("Acorn" to "M50 8 L50 22 M26 40 C26 26 74 26 74 40 Z M26 40 L74 40 M32 40 C32 66 42 84 50 90 C58 84 68 66 68 40"),
+    )
+
     private val cache = HashMap<Pair<ThemeId, Glyph>, Path>()
 
     private fun source(theme: ThemeId, glyph: Glyph): String = when (theme) {
         ThemeId.MODERN -> stones.getValue(glyph).second
         ThemeId.TEMPLE -> temple.getValue(glyph).second
         ThemeId.FUTURE -> shapes.getValue(glyph).second
+        ThemeId.GARDEN -> plants.getValue(glyph).second
+        ThemeId.STARLIGHT -> stones.getValue(glyph).second
     }
 
     /** Path in 0..100 coordinates, in the current theme's glyph set. */
@@ -96,5 +114,7 @@ object GlyphPaths {
         ThemeId.MODERN -> stones.getValue(glyph).first
         ThemeId.TEMPLE -> temple.getValue(glyph).first
         ThemeId.FUTURE -> shapes.getValue(glyph).first
+        ThemeId.GARDEN -> plants.getValue(glyph).first
+        ThemeId.STARLIGHT -> stones.getValue(glyph).first
     }
 }

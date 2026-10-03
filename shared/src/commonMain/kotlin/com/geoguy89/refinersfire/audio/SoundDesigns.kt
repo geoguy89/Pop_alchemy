@@ -25,7 +25,8 @@ object SoundDesigns {
         when (theme) {
             ThemeId.TEMPLE -> ThemeSounds.temple(sfx)?.let { return it }
             ThemeId.FUTURE -> ThemeSounds.future(sfx)?.let { return it }
-            ThemeId.MODERN -> Unit
+            ThemeId.GARDEN -> ThemeSounds.garden(sfx)?.let { return it }
+            ThemeId.MODERN, ThemeId.STARLIGHT -> Unit
         }
         val s = Synth(SFX_RATE)
         return when (sfx) {
@@ -218,6 +219,8 @@ object MusicComposer {
         when (theme) {
             ThemeId.TEMPLE -> return ThemeSounds.templeMusic()
             ThemeId.FUTURE -> return ThemeSounds.futureMusic()
+            ThemeId.GARDEN -> return ThemeSounds.gardenMusic()
+            ThemeId.STARLIGHT -> return ThemeSounds.starlightMusic()
             ThemeId.MODERN -> Unit
         }
         val s = Synth(RATE)

@@ -32,7 +32,106 @@ private fun hash01(seed: Int, k: Int): Float {
 fun DrawScope.drawBackdrop(theme: ThemeId) = when (theme) {
     ThemeId.TEMPLE -> drawTempleWall()
     ThemeId.FUTURE -> drawNeonGrid()
+    ThemeId.GARDEN -> drawGarden()
+    ThemeId.STARLIGHT -> drawStarfield()
     ThemeId.MODERN -> Unit
+}
+
+/** Morning over the hills: a pale sky, the sun's glow, rolling green hills and olive branches at the edges. */
+private fun DrawScope.drawGarden() {
+    val w = size.width
+    val h = size.height
+    drawRect(Brush.verticalGradient(listOf(Color(0xFFE9E6C8), Color(0xFFB9D3B0), Color(0xFF4E6E3A), Color(0xFF26381C))))
+    // The sun, low and warm.
+    val sun = Offset(w * 0.78f, h * 0.16f)
+    drawCircle(Brush.radialGradient(listOf(Color(0xFFFFF6D0), Color(0x66FFE9A0), Color.Transparent), sun, h * 0.35f), h * 0.35f, sun)
+    drawCircle(Color(0xFFFFF8E2), h * 0.045f, sun, alpha = 0.9f)
+    // Three ranges of hills, nearest darkest.
+    val ranges = listOf(
+        Triple(0.46f, Color(0xFF8FB47A), 0.05f),
+        Triple(0.58f, Color(0xFF5E8A48), 0.06f),
+        Triple(0.72f, Color(0xFF3C5E2C), 0.07f),
+    )
+    ranges.forEachIndexed { i, (base, color, amp) ->
+        val p = Path().apply {
+            moveTo(0f, h)
+            var x = 0f
+            while (x <= w + 8f) {
+                val y = h * (base + amp * sin(x / w * 6.28f * (1.1f + i * 0.4f) + i * 1.7f) + amp * 0.4f * sin(x / w * 17f + i))
+                lineTo(x, y)
+                x += 8f
+            }
+            lineTo(w, h)
+            close()
+        }
+        drawPath(p, color)
+    }
+    // Wildflowers in the near grass.
+    for (k in 0 until 90) {
+        val x = w * hash01(k, 11)
+        val y = h * (0.8f + 0.2f * hash01(k, 12))
+        val c = listOf(Color(0xFFFFF4C0), Color(0xFFE88AA8), Color(0xFFB0C8FF), Color(0xFFFFD27A))[k % 4]
+        drawCircle(c, 2.2f + 2.5f * hash01(k, 13), Offset(x, y), alpha = 0.75f)
+    }
+    // Olive branches reaching in from the top corners.
+    fun branch(from: Offset, to: Offset, flip: Float) {
+        drawLine(Color(0xFF3E3220), from, to, 7f, cap = StrokeCap.Round, alpha = 0.85f)
+        for (k in 1..7) {
+            val t = k / 8f
+            val at = Offset(from.x + (to.x - from.x) * t, from.y + (to.y - from.y) * t)
+            val side = if (k % 2 == 0) 1f else -1f
+            val leaf = Path().apply {
+                moveTo(at.x, at.y)
+                quadraticTo(at.x + 26f * flip, at.y + 18f * side, at.x + 46f * flip, at.y + 10f * side)
+                quadraticTo(at.x + 22f * flip, at.y - 2f * side, at.x, at.y)
+            }
+            drawPath(leaf, Color(0xFF55703A), alpha = 0.9f)
+            if (k % 3 == 0) drawCircle(Color(0xFF2E3A20), 7f, Offset(at.x + 18f * flip, at.y + 16f * side), alpha = 0.9f)
+        }
+    }
+    // Kept short and high on the left, clear of the title and labels.
+    branch(Offset(-10f, -h * 0.01f), Offset(w * 0.2f, h * 0.06f), 1f)
+    branch(Offset(w + 10f, h * 0.32f), Offset(w * 0.68f, h * 0.40f), -1f)
+}
+
+/** "Look up into the sky and count the stars" (Genesis 15:5): deep night, the Milky Way, and a sky full of stars. */
+private fun DrawScope.drawStarfield() {
+    val w = size.width
+    val h = size.height
+    drawRect(Brush.verticalGradient(listOf(Color(0xFF020310), Color(0xFF0A1030), Color(0xFF141A3C), Color(0xFF070914))))
+    // The Milky Way: a soft diagonal band of light.
+    for (k in 0 until 26) {
+        val t = k / 25f
+        val c = Offset(w * (-0.1f + 1.2f * t), h * (0.85f - 0.75f * t) + sin(t * 9f) * h * 0.04f)
+        val r = h * (0.12f + 0.08f * hash01(k, 21))
+        drawCircle(Brush.radialGradient(listOf(Color(0x332E4A8A), Color(0x14403070), Color.Transparent), c, r), r, c)
+    }
+    // Stars: many faint, some bright, a few with glints.
+    for (k in 0 until 260) {
+        val x = w * hash01(k, 1)
+        val y = h * hash01(k, 2)
+        val b = hash01(k, 3)
+        val r = 0.8f + 2.2f * b * b
+        val tint = if (k % 7 == 0) Color(0xFFFFE6B0) else if (k % 5 == 0) Color(0xFFBFD4FF) else Color.White
+        drawCircle(tint, r, Offset(x, y), alpha = 0.35f + 0.6f * b)
+        if (b > 0.93f) {
+            drawLine(tint, Offset(x - r * 5, y), Offset(x + r * 5, y), 1f, alpha = 0.5f)
+            drawLine(tint, Offset(x, y - r * 5), Offset(x, y + r * 5), 1f, alpha = 0.5f)
+            drawCircle(Brush.radialGradient(listOf(tint.copy(alpha = 0.35f), Color.Transparent), Offset(x, y), r * 6), r * 6, Offset(x, y))
+        }
+    }
+    // A dark line of distant hills at the bottom.
+    val p = Path().apply {
+        moveTo(0f, h)
+        var x = 0f
+        while (x <= w + 8f) {
+            lineTo(x, h * (0.93f + 0.025f * sin(x / w * 9f) + 0.015f * sin(x / w * 23f)))
+            x += 8f
+        }
+        lineTo(w, h)
+        close()
+    }
+    drawPath(p, Color(0xFF020308))
 }
 
 /** Rough stone blocks in staggered courses, lit by two torches. */

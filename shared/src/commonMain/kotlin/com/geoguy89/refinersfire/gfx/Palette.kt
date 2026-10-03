@@ -183,6 +183,89 @@ private val future = ThemeColors(
     ),
 )
 
+private val garden = ThemeColors(
+    night = Color(0xFF16210F),
+    wood = Color(0xFF3A4A2A),
+    woodLight = Color(0xFF5A6E3E),
+    stone = Color(0xFF7A7056),
+    stoneDark = Color(0xFF3E3828),
+    brass = Color(0xFFB8A15A),
+    brassLight = Color(0xFFEADFA0),
+    brassDark = Color(0xFF5E5226),
+    parchment = Color(0xFFF6EED2),
+    ink = Color(0xFF2A2410),
+    ember = Color(0xFFFF8A3A),
+    lava = Color(0xFFD9481E),
+    ledOrange = Color(0xFFFFC04A),
+    ledRed = Color(0xFFE0502C),
+    leadLight = Color(0xFF9AA28A),
+    lead = Color(0xFF7A8468),
+    leadDark = Color(0xFF566048),
+    goldLight = Color(0xFFFFF4C0),
+    gold = Color(0xFFF0C84E),
+    goldDark = Color(0xFFA8801E),
+    hint = Color(0xFF9CFF7A),
+    invalid = Color(0xFFFF5A3A),
+    frame = listOf(Color(0xFFA89C70), Color(0xFF7A6E48), Color(0xFF4A4228)),
+    well = listOf(Color(0xFF2E4A2A), Color(0xFF101A0E)),
+    panel = listOf(Color(0xFF2E3A22), Color(0xFF161C10)),
+    screen = Color(0xFF0E1408),
+    crucible = Color(0xFF120A06),
+    pieceColors = mapOf(
+        StoneColor.GREEN to Color(0xFF3CC24A),
+        StoneColor.RED to Color(0xFFE0352E),
+        StoneColor.MAGENTA to Color(0xFFC24CC8),
+        StoneColor.BLUE to Color(0xFF4A78E0),
+        StoneColor.YELLOW to Color(0xFFFFD43A),
+        StoneColor.CYAN to Color(0xFF3AC8C0),
+        StoneColor.ORANGE to Color(0xFFFF8C2A),
+        StoneColor.WHITE to Color(0xFFF8F4E6),
+    ),
+    gems = defaultGems,
+)
+
+private val starlight = ThemeColors(
+    night = Color(0xFF05060F),
+    wood = Color(0xFF0C1024),
+    woodLight = Color(0xFF1A2244),
+    stone = Color(0xFF3A4060),
+    stoneDark = Color(0xFF161A2C),
+    brass = Color(0xFFB8C4D8),
+    brassLight = Color(0xFFEEF3FA),
+    brassDark = Color(0xFF4A5470),
+    parchment = Color(0xFFE6ECF8),
+    ink = Color(0xFF0A1020),
+    ember = Color(0xFFFFA54A),
+    lava = Color(0xFFE0482A),
+    ledOrange = Color(0xFFFFD27A),
+    ledRed = Color(0xFFFF6A5A),
+    leadLight = Color(0xFF4E5674),
+    lead = Color(0xFF3A4260),
+    leadDark = Color(0xFF262C44),
+    goldLight = Color(0xFFFFF6CC),
+    gold = Color(0xFFF5D06A),
+    goldDark = Color(0xFFB08A2A),
+    hint = Color(0xFF7CF0FF),
+    invalid = Color(0xFFFF5A6A),
+    frame = listOf(Color(0xFF5A6488), Color(0xFF2E3654), Color(0xFF151A2E)),
+    well = listOf(Color(0xFF1A2050), Color(0xFF05060F)),
+    panel = listOf(Color(0xFF141A34), Color(0xFF080A18)),
+    screen = Color(0xFF040612),
+    crucible = Color(0xFF0A0606),
+    pieceColors = mapOf(
+        StoneColor.GREEN to Color(0xFF46E07A),
+        StoneColor.RED to Color(0xFFFF4A5A),
+        StoneColor.MAGENTA to Color(0xFFE85CFF),
+        StoneColor.BLUE to Color(0xFF5C8CFF),
+        StoneColor.YELLOW to Color(0xFFFFE15A),
+        StoneColor.CYAN to Color(0xFF4AF0FF),
+        StoneColor.ORANGE to Color(0xFFFFA04A),
+        StoneColor.WHITE to Color(0xFFF6F8FF),
+    ),
+    pieceDarkMix = 0.7f,
+    gems = defaultGems,
+)
+
 /** The current theme's colours. Reads are snapshot state, so a theme change redraws everything. */
 object Palette {
     var theme by mutableStateOf(ThemeId.MODERN)
@@ -198,6 +281,8 @@ object Palette {
             ThemeId.MODERN -> modern
             ThemeId.TEMPLE -> temple
             ThemeId.FUTURE -> future
+            ThemeId.GARDEN -> garden
+            ThemeId.STARLIGHT -> starlight
         }
 
     val night get() = colors.night

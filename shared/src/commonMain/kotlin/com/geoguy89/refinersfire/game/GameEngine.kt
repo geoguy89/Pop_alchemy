@@ -46,6 +46,11 @@ data class GameState(
     /** Someone else's [timeline] to race, and whose it is. */
     val ghost: List<Long>? = null,
     val ghostName: String? = null,
+    /** A puzzle: its number, the fixed stones (dealt in order), and the lines to clear (counted from [puzzleStartLines]). */
+    val puzzleId: Int? = null,
+    val puzzlePieces: List<Piece>? = null,
+    val puzzleTarget: Int = 0,
+    val puzzleStartLines: Int = 0,
     val score: Long = 0,
     val streak: Int = 0,
     val bestStreak: Int = 0,
@@ -77,6 +82,12 @@ data class GameState(
     val forgeCapacity: Int get() = if (mode == GameMode.IRON_FORGE) 1 else FORGE_CAPACITY
     /** The seed the pieces come from, if they come in a fixed order. */
     val seed: Long? get() = matchSeed ?: pieceSeed
+    /** Puzzle: lines cleared so far towards the target. */
+    val puzzleLines: Int get() = linesCleared - puzzleStartLines
+    /** Puzzle: every stone has been dealt and used. */
+    val puzzleExhausted: Boolean get() = puzzlePieces != null && pieceIndex > puzzlePieces.size
+    /** Puzzle: stones still to play, counting the one in hand. */
+    val puzzleStonesLeft: Int get() = puzzlePieces?.let { (it.size - pieceIndex + 1).coerceAtLeast(0) } ?: 0
     /** [forgeSources] padded to the forge level (older saves recorded none). */
     val forgeLevels: List<ForgeSource> get() =
         List((forge - forgeSources.size).coerceAtLeast(0)) { ForgeSource.DISCARD } + forgeSources.takeLast(forge)
@@ -235,7 +246,7 @@ class GameEngine(state: GameState) {
 
     /** Whether [piece] may legally be played on the cell at [index]. */
     fun canPlay(piece: Piece, index: Int, s: GameState = state): Boolean {
-        if (s.gameOver) return false
+        if (s.gameOver || s.puzzleExhausted) return false
         val occupant = s.cells[index]
         if (piece is Piece.Hammer) return occupant != null
         if (occupant != null) return false
@@ -349,7 +360,7 @@ class GameEngine(state: GameState) {
      */
     fun discard(timedOut: Boolean = false): List<GameEvent> {
         val s = state
-        if (s.gameOver) return emptyList()
+        if (s.gameOver || s.puzzleExhausted) return emptyList()
         val streak = if (s.current is Piece.Hammer && !timedOut) s.streak else 0
         if (s.forge >= s.forgeCapacity) {
             state = s.copy(gameOver = true, streak = streak, discards = s.discards + 1)
@@ -422,6 +433,11 @@ class GameEngine(state: GameState) {
     private fun withNextPiece(before: GameState): GameState {
         // Each stone that's dealt with (placed or melted) adds the score so far to the run's record.
         val s = if (before.timeline != null && before.timeline.size < MAX_TIMELINE) before.copy(timeline = before.timeline + before.score) else before
+        // A puzzle deals its fixed stones in order; when they run out, the hand stays empty (marked by the index).
+        s.puzzlePieces?.let { pieces ->
+            return if (s.pieceIndex < pieces.size) s.copy(current = pieces[s.pieceIndex], pieceIndex = s.pieceIndex + 1, wrongTries = 0)
+            else s.copy(pieceIndex = pieces.size + 1, wrongTries = 0)
+        }
         val seed = s.seed ?: return s.copy(current = drawPiece(s), wrongTries = 0)
         // An empty board always gets the stone, without using up a piece of the shared sequence.
         if (s.boardEmpty) return s.copy(current = Piece.Cornerstone, wrongTries = 0)
@@ -449,6 +465,7 @@ class GameEngine(state: GameState) {
     /** The next [n] stones after the current one, when the pieces come in a fixed order (Foresight); else none. */
     fun upcoming(n: Int = 3): List<Piece> {
         val s = state
+        s.puzzlePieces?.let { return it.drop(s.pieceIndex).take(n) }
         val seed = s.seed ?: return emptyList()
         return (0 until n).map { k -> matchPiece(seed, s.pieceIndex + k, s.board) }
     }

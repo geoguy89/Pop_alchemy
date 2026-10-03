@@ -50,6 +50,8 @@ data class LifetimeStats(
     val bestMannaStreak: Int = 0,
     val ironBoards: Int = 0,
     val foresightBoards: Int = 0,
+    val puzzlesSolved: Int = 0,
+    val puzzleStars: Int = 0,
 )
 
 enum class AchievementCategory(val title: String) {
@@ -139,6 +141,10 @@ object Achievements {
         one("no-hint-10", "Walk by Faith", "Reach board 10 in a game without using a hint", M) { it.noHintGameBoards >= 9 }
         tiers("iron", M, listOf(1, 10), listOf("Iron Will", "Tempered Steel"), { "Complete $it boards in Iron Forge" }) { it.ironBoards.toLong() }
         one("foresight-board", "Eyes to See", "Complete a board in Foresight", M) { it.foresightBoards > 0 }
+        tiers("puzzles", M, listOf(1, 10, 30, 60), listOf("Seeker", "Searcher of Riddles", "Wise as Serpents", "Solomon's Wisdom"),
+            { "Solve $it puzzles" }) { it.puzzlesSolved.toLong() }
+        tiers("puzzle-stars", M, listOf(60, 180), listOf("Shining Stars", "Like the Stars Forever"),
+            { "Earn $it puzzle stars" }) { it.puzzleStars.toLong() }
 
         val R = AchievementCategory.RANKS
         Ranks.table.drop(1).forEach { (score, rank) ->

@@ -234,9 +234,15 @@ class OnlineTest {
         ann.setShareMode(com.geoguy89.refinersfire.ui.ShareMode.PLUS)
         until(ann, bob, cat, what = "Cat registered") { cat.online.account != null }
         val catId = cat.online.account!!.playerId
-        cat.online.pushScores(listOf(com.geoguy89.refinersfire.data.HighScore("Cat", 7777, "", 4, Difficulty.EASY, com.geoguy89.refinersfire.game.GameMode.STRATEGIC, 1)), true)
+        // Cat's own app also uploads her (empty) score list when she signs up and syncs; whichever upload lands last
+        // wins, so keep sending the test score until the board shows it.
+        val catScore = listOf(com.geoguy89.refinersfire.data.HighScore("Cat", 7777, "", 4, Difficulty.EASY, com.geoguy89.refinersfire.game.GameMode.STRATEGIC, 1))
         ann.openHallOfFame()
-        until(ann, bob, cat, what = "Cat on the leaderboard") { ann.online.fetchLeaderboard(); ann.online.leaderboard.any { it.playerId == catId } }
+        until(ann, bob, cat, what = "Cat on the leaderboard") {
+            cat.online.pushScores(catScore, true)
+            ann.online.fetchLeaderboard()
+            ann.online.leaderboard.any { it.playerId == catId }
+        }
         val catEntry = ann.online.leaderboard.first { it.playerId == catId }
         assertTrue(!ann.isFriend(catId) && ann.canChallenge(catEntry))
         shot(ann, "online_global_board")

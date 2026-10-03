@@ -51,7 +51,7 @@ fun DrawScope.drawStone(stone: Piece.Stone, center: Offset, size: Float, alpha: 
         when (Palette.theme) {
             ThemeId.TEMPLE -> { drawStoneTemple(path, main, dark, alpha, glow); return@inUnitBox }
             ThemeId.FUTURE -> { drawStoneFuture(path, main, alpha, glow); return@inUnitBox }
-            ThemeId.MODERN -> Unit
+            ThemeId.MODERN, ThemeId.GARDEN, ThemeId.STARLIGHT -> Unit
         }
         if (glow > 0f) {
             drawPath(path, main, alpha = 0.10f * glow * alpha, style = roundStroke(34f))
@@ -137,7 +137,7 @@ fun DrawScope.drawLeadTile(topLeft: Offset, s: Float, seed: Int, alpha: Float = 
     when (Palette.theme) {
         ThemeId.TEMPLE -> return drawLeadTileTemple(topLeft, s, seed, alpha)
         ThemeId.FUTURE -> return drawLeadTileFuture(topLeft, s, seed, alpha)
-        ThemeId.MODERN -> Unit
+        ThemeId.MODERN, ThemeId.GARDEN, ThemeId.STARLIGHT -> Unit
     }
     val tint = ((seed * 1103515245 + 12345) ushr 16 and 0xFF) / 255f
     val base = lerp(Palette.lead, Palette.leadLight, tint * 0.25f)
@@ -166,7 +166,7 @@ fun DrawScope.drawGoldTile(topLeft: Offset, s: Float, time: Float, phase: Float,
     when (Palette.theme) {
         ThemeId.TEMPLE -> return drawGoldTileTemple(topLeft, s, time, phase, alpha)
         ThemeId.FUTURE -> return drawGoldTileFuture(topLeft, s, time, phase, alpha)
-        ThemeId.MODERN -> Unit
+        ThemeId.MODERN, ThemeId.GARDEN, ThemeId.STARLIGHT -> Unit
     }
     drawRect(
         Brush.linearGradient(listOf(Palette.goldLight, Palette.gold, Palette.goldDark), topLeft, topLeft + Offset(s, s)),
@@ -257,7 +257,7 @@ fun DrawScope.drawBrassPlate(topLeft: Offset, size: Size, corner: Float, rivets:
     when (Palette.theme) {
         ThemeId.TEMPLE -> return drawIronPlate(topLeft, size, corner, rivets, dark)
         ThemeId.FUTURE -> return drawGlassPlate(topLeft, size, corner, rivets, dark)
-        ThemeId.MODERN -> Unit
+        ThemeId.MODERN, ThemeId.GARDEN, ThemeId.STARLIGHT -> Unit
     }
     val c0 = if (dark) Color(0xFF3A2A18) else Palette.brassLight
     val c1 = if (dark) Color(0xFF261A0F) else Palette.brass

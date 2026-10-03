@@ -77,6 +77,28 @@ class NewModesRenderTest {
     }
 
     @Test
+    fun puzzles() {
+        val store = named()
+        store.savePuzzleStars(mapOf(1 to 3, 2 to 2, 3 to 3, 4 to 1, 5 to 3, 6 to 2))
+        render("puzzles_phone", 412 * 2, 915 * 2, store) { it.push(Overlay.Puzzles) }
+        render("puzzle_play_phone", 412 * 2, 915 * 2, store) { it.startPuzzle(7) }
+        render("puzzle_done_phone", 412 * 2, 915 * 2, store) {
+            it.startPuzzle(3)
+            it.push(Overlay.PuzzleDone(3, true, 2, "Solved!"))
+        }
+    }
+
+    @Test
+    fun newThemesOnAPhone() {
+        for (theme in listOf(ThemeId.GARDEN, ThemeId.STARLIGHT)) {
+            val n = theme.name.lowercase()
+            render("theme_${n}_title_phone", 412 * 2, 915 * 2) { it.setTheme(theme) }
+            render("theme_${n}_game_phone", 412 * 2, 915 * 2) { it.setTheme(theme); it.loadForPreview(played(GameMode.STRATEGIC)) }
+        }
+        com.geoguy89.refinersfire.gfx.Palette.theme = ThemeId.MODERN
+    }
+
+    @Test
     fun forgeColours() {
         val s = played(GameMode.STRATEGIC).copy(forge = 3, stoked = 1, forgeSources = listOf(ForgeSource.STOKE, ForgeSource.HINT, ForgeSource.MISS))
         render("forge_colours_phone", 412 * 2, 915 * 2) { it.loadForPreview(s) }

@@ -103,6 +103,21 @@ order. Like the manna in the wilderness, it's fresh each morning and gone by the
 5. When a friend gathers the day's Manna before you, your phone gets a nudge ("Sam gathered today's Manna: 4,250. Can
    you beat it?"). Turn these off in **Options → Friends' daily Manna**.
 
+| Today's Manna | Hall of Fame | Forge colours |
+|---|---|---|
+| ![](docs/screenshots/manna.png) | ![](docs/screenshots/hall_of_fame.png) | ![](docs/screenshots/forge_colours.png) |
+
+### Puzzles
+
+**Puzzles** on the title screen opens a book of 60, each named for a moment in Scripture, from *Let There Be Light* to
+*The New Jerusalem*. Each one sets a board partway through a game and a fixed run of stones (you can see the next three
+coming); clear the number of lines it asks for before the stones run out. Every puzzle has been solved by the game itself
+with those exact stones, so there's always a way.
+
+* **Three stars** for a solve with no stone melted and no hint, two with one of either, one otherwise.
+* The first three are open; each one you solve opens another.
+* Stuck? **Menu → Retry Puzzle** starts it again.
+
 ### Playing with a friend
 
 1. Tap **Friends & 1v1** on the title screen, then **Copy Code** and send your friend code (for example
@@ -279,10 +294,20 @@ results online. Your scores appear on the Global board only while Share Scores i
 * **Temple**: lamplit stone, with fish, crown, anchor, tablets, key, lamp, wheat, olive branch, harp, scroll, shofar
   and star.
 * **Future**: neon and glass, with clean geometric shapes.
+* **Garden**: morning light on an olive grove, a lyre-and-flute soundtrack, and plants of Scripture as pieces:
+  pomegranate, fig, grapes, lily, barley, almond blossom, palm, cedar, vine, hyssop, rose of Sharon and acorn.
+* **Starlight**: a night sky full of stars ("count the stars", Genesis 15:5) with a slow, spacious soundtrack.
+  **Earned** by gathering the daily Manna on seven days.
+* Every theme has its own backdrop, music and lettering.
 * **Options → Pieces** uses any theme's pieces with any other theme.
 * Each board has its own engraving: the seal, the breastplate, day and night, the vine, the lampstand, the refiner's
   furnace, the anchor, the tablets and the rose of Sharon.
-* **189 achievements** to earn, from first steps to rare feats that take months. They're never announced mid-game.
+* **204 achievements** to earn, from first steps to rare feats that take months (daily Manna streaks, puzzles,
+  Iron Forge). They're never announced mid-game.
+
+| Garden | Starlight | Puzzles |
+|---|---|---|
+| ![](docs/screenshots/garden.png) | ![](docs/screenshots/starlight.png) | ![](docs/screenshots/puzzles.png) |
 
 | Temple | Future | Achievements |
 |---|---|---|
@@ -293,8 +318,8 @@ results online. Your scores appear on the Global board only while Share Scores i
 ## Credits
 
 Fonts, all under the SIL Open Font License (see `licenses/`): Cinzel and Cinzel Decorative by Natanael Gama; Pirata One
-by Rodrigo Fuenzalida and Nicolas Massi; IM Fell English by Igino Marini; Audiowide by Astigmatic; Rajdhani by Indian
-Type Foundry.
+by Rodrigo Fuenzalida and Nicolas Massi; IM Fell English by Igino Marini; Audiowide, Marcellus and Uncial Antiqua by
+Astigmatic; Della Respira by Nathan Willis; Rajdhani by Indian Type Foundry.
 
 Scripture quotations are taken from the Holy Bible, New Living Translation, copyright © 1996, 2004, 2015 by Tyndale
 House Foundation. Used by permission of Tyndale House Publishers, Carol Stream, Illinois 60188. All rights reserved.

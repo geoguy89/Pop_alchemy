@@ -111,7 +111,11 @@ fun TitleScreen(vm: GameViewModel) {
                 },
                 vm::openManna, buttons, dark = manna != null, fontSize = 16.sp,
             )
-            BrassButton("How to Play", { vm.push(Overlay.HowToPlay) }, buttons, dark = true)
+            Row(buttons, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                val solved = vm.puzzleStars.size
+                BrassButton(if (solved > 0) "Puzzles · $solved" else "Puzzles", vm::openPuzzles, Modifier.weight(1f), dark = true, fontSize = 15.sp)
+                BrassButton("How to Play", { vm.push(Overlay.HowToPlay) }, Modifier.weight(1f), dark = true, fontSize = 15.sp)
+            }
             BrassButton("Hall of Fame", { vm.openHallOfFame() }, buttons, dark = true)
             val social = vm.online.incoming.size + vm.totalUnread + vm.ourMoves.size
             val on = vm.online.friends.count { it.online }
@@ -184,6 +188,8 @@ fun OverlayHost(vm: GameViewModel) {
         is Overlay.AsyncDone -> AsyncDonePanel(vm, o)
         Overlay.Achievements -> AchievementsPanel(vm)
         Overlay.Manna -> MannaPanel(vm)
+        Overlay.Puzzles -> PuzzlesPanel(vm)
+        is Overlay.PuzzleDone -> PuzzleDonePanel(vm, o)
         is Overlay.MannaDone -> MannaDonePanel(vm, o)
     }
 }
@@ -256,11 +262,28 @@ private fun OptionsPanel(vm: GameViewModel) {
             BrassButton("Check Now", { vm.click(); vm.checkForUpdate(manual = true) }, Modifier.fillMaxWidth(), dark = true, fontSize = 14.sp, minHeight = 38.dp)
         }
         Text("Theme", style = bodyStyle(15.sp, bold = true), modifier = Modifier.fillMaxWidth())
-        Choice(ThemeId.entries, s.theme, { it.displayName }) { vm.click(); vm.setTheme(it) }
+        // Five themes: three, then two. Starlight opens after seven days of Manna.
+        for (row in ThemeId.entries.chunked(3)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                for (t in row) {
+                    val locked = !vm.themeUnlocked(t)
+                    BrassButton(
+                        if (locked) "${t.displayName} (locked)" else t.displayName, { vm.chooseTheme(t) }, Modifier.weight(1f),
+                        dark = t != s.theme, fontSize = 14.sp, minHeight = 40.dp,
+                    )
+                }
+                repeat(3 - row.size) { Box(Modifier.weight(1f)) }
+            }
+        }
         Text(s.theme.blurb, style = bodyStyle(13.sp, Palette.parchment.copy(alpha = 0.75f)), textAlign = TextAlign.Center)
         Text("Pieces", style = bodyStyle(15.sp, bold = true), modifier = Modifier.fillMaxWidth())
-        val pieceChoices = listOf<ThemeId?>(null, ThemeId.MODERN, ThemeId.TEMPLE, ThemeId.FUTURE)
-        Choice(pieceChoices, s.pieceSet, { pieceSetLabel(it) }) { vm.click(); vm.updateSettings(s.copy(pieceSet = it)) }
+        val pieceChoices = listOf<ThemeId?>(null, ThemeId.MODERN, ThemeId.TEMPLE, ThemeId.FUTURE, ThemeId.GARDEN)
+        for (row in pieceChoices.chunked(3)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                for (p in row) BrassButton(pieceSetLabel(p), { vm.click(); vm.updateSettings(s.copy(pieceSet = p)) }, Modifier.weight(1f), dark = p != s.pieceSet, fontSize = 14.sp, minHeight = 40.dp)
+                repeat(3 - row.size) { Box(Modifier.weight(1f)) }
+            }
+        }
         Text("Share Scores", style = bodyStyle(15.sp, bold = true), modifier = Modifier.fillMaxWidth())
         Choice(ShareMode.entries, vm.shareMode, { it.label }) { vm.setShareMode(it) }
         Text(
@@ -310,6 +333,8 @@ private fun pieceSetLabel(t: ThemeId?) = when (t) {
     ThemeId.MODERN -> "Stones"
     ThemeId.TEMPLE -> "Temple"
     ThemeId.FUTURE -> "Shapes"
+    ThemeId.GARDEN -> "Plants"
+    ThemeId.STARLIGHT -> "Stones"
 }
 
 @Composable
@@ -328,7 +353,13 @@ private fun PausePanel(vm: GameViewModel) {
         BrassButton("Resume", vm::pop, m)
         // A live match can't be saved and resumed: quitting abandons it.
         val inMatch = vm.match != null
-        if (!inMatch) BrassButton("New Game", { vm.push(Overlay.ConfirmQuit) }, m, dark = true)
+        val inPuzzle = vm.state?.puzzleId != null
+        if (inPuzzle) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                BrassButton("Retry Puzzle", vm::retryPuzzle, Modifier.weight(1f), dark = true, fontSize = 14.sp)
+                BrassButton("All Puzzles", vm::leavePuzzle, Modifier.weight(1f), dark = true, fontSize = 14.sp)
+            }
+        } else if (!inMatch) BrassButton("New Game", { vm.push(Overlay.ConfirmQuit) }, m, dark = true)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             BrassButton("How to Play", { vm.push(Overlay.HowToPlay) }, Modifier.weight(1f), dark = true, fontSize = 14.sp)
             BrassButton("Hall of Fame", { vm.openHallOfFame() }, Modifier.weight(1f), dark = true, fontSize = 14.sp)
@@ -338,7 +369,7 @@ private fun PausePanel(vm: GameViewModel) {
             BrassButton("Achievements", vm::openAchievements, Modifier.weight(1f), dark = true, fontSize = 14.sp)
         }
         if (inMatch) BrassButton("Abandon Match", { vm.push(Overlay.ConfirmAbandonMatch) }, m, dark = true)
-        else BrassButton("Save & Quit to Title", vm::quitToTitle, m, dark = true)
+        else if (!inPuzzle) BrassButton("Save & Quit to Title", vm::quitToTitle, m, dark = true)
     }
 }
 

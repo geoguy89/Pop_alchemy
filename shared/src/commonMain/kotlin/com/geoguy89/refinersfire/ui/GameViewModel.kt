@@ -1133,7 +1133,8 @@ class GameViewModel(
         challenge(Rival(opponent.playerId, opponent.name), difficulty, goal)
     }
 
-    fun hallRows(tab: HallTab): List<HallRow> {
+    /** [difficulty] null shows every difficulty together; otherwise only scores set on that one. */
+    fun hallRows(tab: HallTab, difficulty: Difficulty? = null): List<HallRow> {
         val myId = online.account?.playerId
         val mine = highScores.map { HallRow(it, null, null, isMe = true) }
         val rows = when (tab) {
@@ -1149,8 +1150,9 @@ class GameViewModel(
                 own + server + relayed
             }
         }
-        val unique = rows.distinctBy { Triple(it.score.name, it.score.score, it.score.epochMillis) }
-        // Global ranks players, so each appears once with their best.
+        val byDifficulty = if (difficulty == null) rows else rows.filter { it.score.difficulty == difficulty }
+        val unique = byDifficulty.distinctBy { Triple(it.score.name, it.score.score, it.score.epochMillis) }
+        // Global ranks players, so each appears once with their best (for that difficulty, when one is chosen).
         val perPlayer = if (tab == HallTab.GLOBAL) unique.sortedByDescending { it.score.score }.distinctBy { it.playerId ?: (it.score.name + if (it.isMe) "#me" else "") } else unique
         return perPlayer
             .sortedByDescending { it.score.score }

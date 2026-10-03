@@ -305,16 +305,20 @@ private fun OptionSwitch(label: String, checked: Boolean, colors: androidx.compo
 @Composable
 private fun HighScoresPanel(vm: GameViewModel) {
     var tab by rememberSaveable { mutableStateOf(HallTab.GLOBAL) }
+    var difficulty by rememberSaveable { mutableStateOf<Difficulty?>(null) }
     GamePanel("Hall of Fame", vm::pop, maxWidth = 660.dp) {
         Choice(HallTab.entries, tab, { it.label }) { vm.click(); tab = it; if (it == HallTab.GLOBAL) vm.online.fetchLeaderboard() }
-        val rows = vm.hallRows(tab)
+        val difficultyChoices = listOf<Difficulty?>(null) + Difficulty.entries
+        Choice(difficultyChoices, difficulty, { it?.displayName ?: "All Levels" }) { vm.click(); difficulty = it }
+        val rows = vm.hallRows(tab, difficulty)
         if (rows.isEmpty()) {
             Text(
-                when (tab) {
-                    HallTab.GLOBAL -> if (vm.online.reachable) "No one is on the Global board yet. Set Share Scores to Global in Options to put yours up." else "Can't reach the game server right now."
-                    HallTab.FRIENDS -> "Add friends from Friends & 1v1 to see their best here."
-                    HallTab.NEARBY -> "Nobody nearby yet. Scores appear when someone plays on the same Wi-Fi."
-                    HallTab.MINE -> "No names are yet inscribed here.\nWill yours be the first?"
+                when {
+                    difficulty != null -> "No scores yet on ${difficulty!!.displayName}. Try a different level, or play one!"
+                    tab == HallTab.GLOBAL -> if (vm.online.reachable) "No one is on the Global board yet. Set Share Scores to Global in Options to put yours up." else "Can't reach the game server right now."
+                    tab == HallTab.FRIENDS -> "Add friends from Friends & 1v1 to see their best here."
+                    tab == HallTab.NEARBY -> "Nobody nearby yet. Scores appear when someone plays on the same Wi-Fi."
+                    else -> "No names are yet inscribed here.\nWill yours be the first?"
                 },
                 style = bodyStyle(), textAlign = TextAlign.Center,
             )

@@ -187,6 +187,8 @@ Open **Friends & 1v1** from the title screen.
   you're both asked to accept. You can also add people from the Global or Nearby Hall of Fame. Friends are marked
   with a green check.
 * **Online status**: friends are listed online-first, with "Online now" or when they were last seen.
+* **Hall of Fame**: under its tabs (Global, Friends, Nearby, Mine) you can filter the list by difficulty — Easy,
+  Average, Hard, or All Levels — since a Hard score and an Easy score aren't really comparable.
 * **Live 1v1**: challenge a friend who's online. You both play the same difficulty and get the same stones in the same
   order. A bar above your board shows your rival's score and progress, with a banner whenever they clear a board.
   Tap **Peek** to see their board, then **Back to My Board**. Tap **Chat** at the bottom of the screen to talk
